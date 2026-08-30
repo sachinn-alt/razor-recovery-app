@@ -1,122 +1,146 @@
 <p align="center">
-  <img src="public/app-icon.png" alt="RazorRecovery.AI Logo" width="120" style="border-radius: 24px; box-shadow: 0 8px 32px rgba(0, 180, 255, 0.25);" />
+  <img src="public/app-icon.png" alt="RazorRecovery Logo" width="100" style="border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 102, 255, 0.3);" />
 </p>
 
-<h1 align="center">RazorRecovery.AI</h1>
+<h1 align="center">⚡ RazorRecovery</h1>
 
 <p align="center">
-  <strong>Enterprise Agentic Payment Failure Recovery & Smart Checkout Optimization Platform</strong>
+  <strong>Autonomous Revenue Recovery, Dynamic Cart-Lock Micro-Checkouts & Bank Outage Telemetry for Indian E-Commerce & FinTech</strong>
 </p>
 
 <p align="center">
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/Vite-8.2-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" /></a>
   <a href="https://razorpay.com"><img src="https://img.shields.io/badge/Razorpay-Integrated-0C2340?style=for-the-badge&logo=razorpay&logoColor=00BAF2" alt="Razorpay" /></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/Node.js-SQLite_WAL-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js SQLite WAL" /></a>
-  <a href="https://owasp.org"><img src="https://img.shields.io/badge/OWASP-Hardened-orange?style=for-the-badge&logo=owasp&logoColor=white" alt="OWASP Hardened" /></a>
-  <a href="#compliance--dpdp-act"><img src="https://img.shields.io/badge/DPDP_Act_2023-Compliant-success?style=for-the-badge" alt="DPDP Act Compliant" /></a>
+  <a href="#compliance--dpdp-act-2023-alignment"><img src="https://img.shields.io/badge/DPDP_Act_2023-Compliant-00C853?style=for-the-badge&logo=shield" alt="DPDP Act Compliant" /></a>
+  <a href="#security--verification-test-suite"><img src="https://img.shields.io/badge/Security-HMAC_SHA--256-blue?style=for-the-badge" alt="Security" /></a>
 </p>
 
 ---
 
-## ⚡ Overview
+## 🚀 What is RazorRecovery?
 
-**RazorRecovery.AI** is an autonomous, production-grade FinTech payment recovery platform tailored for Indian e-commerce, D2C, and subscription platforms integrated with **Razorpay**. 
+**RazorRecovery** is a production-grade, enterprise payment recovery platform engineered for Indian digital commerce and D2C brands integrated with **Razorpay**. 
 
-When a customer's transaction fails due to bank outages, 3D Secure OTP timeouts, or gateway friction, RazorRecovery.AI intercepts the failure webhook, determines the optimal recovery strategy using **Gemini AI & Smart Routing**, and instantly initiates a high-converting, personalized 1-click recovery journey across WhatsApp, SMS, and Email.
+When customer transactions fail due to 3DS OTP drop-offs, issuer bank downtimes, or UPI limits, RazorRecovery autonomously intercepts the failure event, determines the optimal fallback route, and orchestrates an instant, zero-friction recovery journey across **1-Click Hosted Checkouts, WhatsApp, SMS, and Email**.
+
+```
+    Payment Failed (OTP Timeout / Bank Outage)
+                    │
+                    ▼
+       ⚡ RazorRecovery Autonomous Engine
+   ┌────────────────┼────────────────┐
+   │                │                │
+   ▼                ▼                ▼
+💳 1-Click       🕒 4-Stage       🛡️ "Money Debited"
+Micro-Checkout   Drip Cadence     Auto-Reconciliation
+(15m Cart Lock)  (T+0m to T+24h)  (UTR Dispute Resolver)
+```
 
 ---
 
-## 🌟 Key Features
+## 🌟 Core Superpowers
 
-### 🤖 1. Autonomous Conversational AI Recovery Specialist
-- **Gemini 3.7 / 3.6 Flash Integration**: Understands customer drop-off context and generates empathetic, conversational explanations in plain language.
-- **Strict Financial Guardrails**: Hard-enforces merchant discount caps (e.g., maximum 5–10% discount cap) directly server-side to prevent discount abuse.
-- **Deterministic Rule Engine Fallback**: Zero-latency instant fallback engine if external LLM APIs are unreachable.
+### 💳 1. 1-Click Hosted Customer Micro-Checkout (`/pay/:id`)
+- **Zero Login Friction**: Customers click recovery links from WhatsApp/SMS and open an instant, mobile-first micro-checkout.
+- **15-Minute Dynamic Cart & Inventory Lock**: Real-time countdown timer (`14:59`) ensuring stock is reserved, creating conversion urgency without false scarcity.
+- **Smart Fallback Defaults**: Automatically pre-selects 1-Click UPI Intent if 3DS card OTP failed, or PayLater if balance was exceeded.
+- **Dynamic AI Recovery Vouchers**: Transparent price breakdown with capped merchant recovery incentives (e.g. 5% voucher).
+- **1-Tap Recovery Settlement**: Instant confirmation that **automatically cancels all pending downstream drip nudges**.
 
-### 🛡️ 2. Enterprise FinTech Security & DPDP Compliance
-- **Mandatory HMAC SHA-256 Signature Verification**: Timing-safe verification (`crypto.timingSafeEqual`) on all incoming Razorpay webhooks to prevent spoofing and forgery.
-- **Idempotency & Replay Protection**: Automatic deduplication of webhook events using SHA-256 payload fingerprinting and event tracking.
-- **DPDP Act (2023) PII Masking**: Customer emails and phone numbers are masked (`+919876****210` / `r***l@example.com`) across dashboards, API responses, and logs.
-- **Customer Opt-Out (STOP) Gate**: Instant compliance honoring when customers express unsubscribe intent (`STOP`, `unsubscribe`, `opt out`).
-- **Immutable Cryptographic Audit Trail**: Every recovery link generation, manual injection, and opt-out is logged with client IP and timestamps.
+### 🕒 2. Multi-Touch Time-Decayed Drip Cadence Engine
+- **Stage 1 (T+0m)**: Instant In-App Retry Bottom Sheet & Smart Switch Toast.
+- **Stage 2 (T+5m)**: WhatsApp AI Conversational Recovery Nudge with personalized checkout link.
+- **Stage 3 (T+30m)**: Transactional SMS Fallback with urgent cart reservation reminder.
+- **Stage 4 (T+24h)**: Final Cart Expiration Notice + Escalated 10% Discount Voucher.
+- **Auto-Termination Gate**: Completing payment at any stage instantly terminates subsequent messages (`⚡ Auto-Cancelled`).
 
-### 🧭 3. Razorpay Optimizer & Smart Routing
-- **Failure Telemetry Analysis**: Detects failure error codes (`BAD_REQUEST_AUTHENTICATION_FAILED`, `INSUFFICIENT_FUNDS`, `GATEWAY_ERROR`).
-- **Dynamic Routing Recommendations**:
-  - Recommends **1-Click UPI Intent** for 3D Secure card friction.
-  - Suggests **Cardless EMI / PayLater** for balance limits.
-  - Automatically triggers **Backup Acquirer Switch** on gateway drops.
+### 🛡️ 3. "Money Debited but Failed" Auto-Reconciliation Engine
+- Resolves the #1 customer panic point in Indian digital payments (bank funds deducted, but gateway timed out).
+- **Automated UTR Reference Matching**: Ingests and matches late capture webhook settlements from HDFC, SBI, ICICI, etc.
+- **Zero Double-Charge**: Resolves the transaction directly to `Recovered` without requiring the customer to pay twice.
+- **Instant WhatsApp Reassurance Notice**: Automatically formats and dispatches confirmation details with bank UTR proof.
 
-### 📊 4. High-Performance Dashboard & Simulator
-- **SQLite WAL Mode Engine**: Zero-dependency, sub-millisecond query execution (`< 1ms`) with pre-compiled prepared statements.
-- **Batch Simulator**: Test 50+ concurrent failed payment simulations across various banks and payment methods.
-- **Interactive WhatsApp Playground**: Test live conversations, discount negotiations, and instant payment link generation.
-- **Live Terminal**: Streaming real-time audit logs and webhook telemetry.
+### 🌐 4. Real-Time Bank Outage & Downstream Health Radar
+- **Live Telemetry Monitoring**: Real-time latency (ms), success rates (%), and health states across:
+  - `Razorpay Turbo UPI Switch` (99.4% / 310ms)
+  - `ICICI Bank 3DS 2.0 Rails` (98.2% / 540ms)
+  - `State Bank of India UPI Node` (94.8% / 820ms)
+  - `HDFC Netbanking Gateway` (Degraded / OTP spike detection)
+  - `Axis Bank Netbanking` (Peak volume tracking)
+- **Active Optimizer Steering**: Dynamically bypasses degraded banking switches during recovery checkout routing.
+
+### 🤖 5. Conversational AI Recovery Specialist with Strict Guardrails
+- **Empathetic Contextual AI**: Powered by Google Gemini with deterministic rule engine fallback.
+- **Hard Server-Side Discount Caps**: Strictly enforces merchant financial caps (e.g., maximum 5–10%) to prevent discount abuse.
+- **DPDP (2023) "STOP" Compliance Gate**: Immediately halts messaging when customers opt out.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Client ["Customer & Gateway"]
-        RZP[Razorpay Webhook Event]
-        CUST[Customer on WhatsApp / Web]
-    end
+sequenceDiagram
+    autonumber
+    actor Customer as Customer
+    participant Gateway as Razorpay Gateway
+    participant Backend as RazorRecovery Engine (SQLite WAL)
+    participant Radar as Bank Health Radar
+    participant Cadence as Drip Cadence Queue
+    participant Checkout as 1-Click Micro-Checkout
 
-    subgraph Backend ["RazorRecovery.AI Backend (Node.js + SQLite WAL)"]
-        AUTH[HMAC SHA-256 Verifier & Idempotency Filter]
-        OPT[Razorpay Optimizer Engine]
-        AI[Gemini Guardrailed AI Engine]
-        DB[(SQLite WAL High-Concurrency DB)]
-        AUDIT[Cryptographic Audit Logger]
-    end
-
-    subgraph Frontend ["Control Center (React 19 + Vite + Framer Motion)"]
-        DASH[Merchant Analytics Dashboard]
-        SIM[Batch Payment Simulator]
-        PLAY[Interactive WhatsApp Playground]
-        TERM[Live Audit Terminal]
-    end
-
-    RZP -->|x-razorpay-signature| AUTH
-    AUTH -->|Verified Event| DB
-    AUTH --> AUDIT
-    DB --> OPT
-    CUST <-->|1-Click Recovery Link & Chat| AI
-    AI -->|Server-Validated Discount Cap| DB
+    Customer->>Gateway: Initiates Payment (₹4,499)
+    Gateway-->>Customer: 3DS OTP Fails / Bank Timeout
+    Gateway->>Backend: Webhook [payment.failed] (HMAC SHA-256)
     
-    Backend <-->|Real-time REST & Telemetry| Frontend
+    Backend->>Backend: Verify HMAC & Fingerprint Event
+    Backend->>Radar: Check Issuer Health & Latency
+    Backend->>Cadence: Schedule 4-Stage Drip (T+0m, T+5m, T+30m, T+24h)
+    Backend-->>Customer: Dispatch WhatsApp Nudge with 15m Cart Lock Link
+    
+    Customer->>Checkout: Opens /pay/:id (Cart Locked for 15m)
+    Customer->>Checkout: 1-Tap Pay via Turbo UPI
+    Checkout->>Backend: Settle Recovery Transaction
+    Backend->>Cadence: Cancel All Downstream Pending Nudges
+    Backend-->>Customer: Instant Order Confirmation Receipt
 ```
 
 ---
 
-## 🚀 Quick Start
+## 📊 Executive Financial Attribution Bar
+
+RazorRecovery features an ultra-compact, high-density financial ticker banner on the main merchant console:
+
+| Metric | Description | Value |
+| :--- | :--- | :--- |
+| **Gross GMV Rescued** | Total revenue saved by autonomous recovery agents | `₹3,200.00+` |
+| **Net Recovery Rate** | Percentage of rescued orders vs. total failed drop-offs | `33.3%` |
+| **Net Margin Preserved** | Revenue preserved after subtracting recovery discount incentives | `₹3,008.00` |
+| **Top Recovery Rail** | Optimal conversion channel (bypassing 3DS friction) | `Turbo UPI (44.2%)` |
+
+---
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
 - **Node.js**: `v20.0.0` or higher
 - **npm** or **pnpm**
 
-### 1. Clone the Repository
+### 1. Clone & Install
 ```bash
 git clone https://github.com/sachinn-alt/razor-recovery-app.git
 cd razor-recovery-app
-```
-
-### 2. Install Dependencies
-```bash
 npm install
 ```
 
-### 3. Configure Environment Variables
-Copy the `.env.example` file to `.env`:
+### 2. Configure Environment
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
 ```env
 PORT=3001
 DEFAULT_MERCHANT_ID=mid_acme_india
@@ -129,31 +153,50 @@ ENABLE_DPDP_PII_MASKING=true
 ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-### 4. Run the Application
+### 3. Initialize High-Performance Database
+```bash
+node init_db.js
+```
+
+### 4. Start Development Servers
 Start the backend server:
 ```bash
 npm run server
 ```
 
-In a second terminal, start the Vite frontend:
+In a separate terminal, launch the Vite frontend:
 ```bash
 npm run dev
 ```
 
-Visit **`http://localhost:5173`** in your browser.
+Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## 🧪 Security & Verification Test Suite
+## 🧪 Automated Verification Test Suites
 
-Run the automated enterprise security and compliance test suite:
+### 1. Advanced Recovery Capabilities Suite
+```bash
+node test_advanced_recovery.js
+```
+```text
+🧪 Starting Advanced Recovery Capabilities Endpoint Verification...
+
+✅ [1/5] Bank Health Radar: PASSED (Monitoring 6 Indian banking switches)
+✅ [2/5] 1-Click Hosted Checkout Session: PASSED (15m Dynamic Cart Lock)
+✅ [3/5] 1-Tap Recovery Settlement & Auto-Cancel Drip: PASSED
+✅ [4/5] "Money Debited but Failed" Auto-Reconciliation: PASSED (Dispatched WhatsApp notice)
+✅ [5/5] Executive ROI & Attribution Metrics: PASSED (Recovery Rate: 33.3%)
+
+🎉 ALL 5 ADVANCED PAYMENT RECOVERY CHECKS PASSED PERFECTLY!
+```
+
+### 2. Enterprise Security & DPDP Compliance Suite
 ```bash
 node test_security.js
 ```
-
-### Test Suite Output:
 ```text
-🧪 Starting RazorRecovery.AI Enterprise FinTech Security & Performance Suite...
+🧪 Starting RazorRecovery Enterprise FinTech Security & Performance Suite...
 
   ✅ PASS: Compliance Endpoint returns active security flags
   ✅ PASS: Valid HMAC SHA-256 signature accepted (200 OK)
@@ -171,36 +214,34 @@ node test_security.js
 
 ## 📡 API Reference
 
-| Endpoint | Method | Description | Security / Auth |
+| Endpoint | Method | Purpose | Auth & Security |
 | :--- | :---: | :--- | :--- |
-| `/api/transactions` | `GET` | Retrieve merchant transactions | DPDP PII Masking, Merchant Context |
-| `/api/transactions` | `POST` | Manually inject a failed payment | Payload validation, Audit logged |
-| `/api/stats` | `GET` | Real-time recovery rates & volume | Aggregated SQLite query |
-| `/api/recovery/generate-link` | `POST` | Generate secure Razorpay payment link | Server-side price & discount cap verification |
-| `/api/recovery/chat` | `POST` | Conversational recovery AI assistant | Input sanitization, DPDP STOP opt-out gate |
-| `/api/webhooks/razorpay` | `POST` | Razorpay webhook ingestion | Mandatory HMAC SHA-256 & Idempotency check |
-| `/api/optimizer/recommend` | `POST` | Intelligent payment route recommendation | Telemetry matrix analysis |
-| `/api/compliance/status` | `GET` | Security health & compliance check | Active system flags |
-| `/api/audit-logs` | `GET` | View cryptographic audit log history | Immutable audit trail |
+| `/api/checkout/:id` | `GET` | 1-Click hosted checkout metadata & 15m cart lock | Tokenized Session |
+| `/api/checkout/:id/pay` | `POST` | 1-Tap recovery settlement & drip auto-cancel | Prepared Statement |
+| `/api/cadence/:txId` | `GET` | Fetch 4-stage time-decayed drip sequence | Merchant Context |
+| `/api/reconcile` | `POST` | Resolve double debits via bank UTR matching | Audit Logged |
+| `/api/bank-health` | `GET` | Live telemetry for Indian banking switches | Real-Time Telemetry |
+| `/api/analytics/roi` | `GET` | Executive GMV rescued & margin metrics | SQLite Aggregation |
+| `/api/webhooks/razorpay` | `POST` | Secure webhook ingestion | Mandatory HMAC SHA-256 |
+| `/api/recovery/chat` | `POST` | Contextual AI recovery assistant | DPDP STOP Gate & Caps |
 
 ---
 
-## 🔒 Compliance & DPDP Act 2023 Alignment
+## 🔒 Compliance & DPDP Act (2023) Alignment
 
-- **Data Minimization**: Raw customer PII is masked before reaching frontend interfaces.
-- **Right to Opt-Out**: Automatic detection of consent revocation (`STOP`, `unsubscribe`) halts automated messages immediately.
-- **Auditability**: All merchant operations and recovery attempts are stored in an append-only audit log table.
-- **PCI-DSS Scope Limitation**: Payment generation uses Razorpay-hosted 1-click links, keeping merchant servers out of PCI-DSS cardholder data scope.
+- **Data Minimization & PII Masking**: Customer contact details are masked (`+91 98765 ****5` / `a****@example.com`) across dashboards, API responses, and logs.
+- **Right to Opt-Out ("STOP")**: Automatic detection of consent revocation immediately ceases all automated messaging.
+- **Immutable Cryptographic Audit Trail**: Every link generation, manual dispute resolution, and payment settlement is recorded with IP and timestamp.
+- **Zero PCI-DSS Scope Overhead**: Payment processing leverages tokenized 1-click Hosted Checkouts, keeping merchant infrastructure completely out of PCI-DSS scope.
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technology Stack
 
-- **Frontend**: React 19, TypeScript, Vite, Framer Motion, Vanilla CSS Design System
-- **Backend**: Node.js Native HTTP Server, SQLite with Write-Ahead Logging (`node:sqlite DatabaseSync`)
-- **AI & Reasoning**: Google Gemini API (`gemini-3.7-flash` / `gemini-3.6-flash`), Deterministic Rule Engine
-- **Integrations**: Razorpay Payment Links API, Razorpay Webhooks
-- **Security Testing**: OWASP Top 10 / Strix Security Suite
+- **Frontend**: React 19, TypeScript, Vite, Framer Motion, Swiss Precision CSS Design System
+- **Backend**: Node.js Native HTTP Engine, SQLite with Write-Ahead Logging (`node:sqlite DatabaseSync`)
+- **AI Engine**: Google Gemini API (`gemini-3.7-flash` / `gemini-3.6-flash`) with Deterministic Rule Engine
+- **Telemetry & Gateway**: Razorpay Payment Links API, Razorpay Webhooks, Custom Bank Health Matrix
 
 ---
 
@@ -209,5 +250,5 @@ node test_security.js
 Distributed under the **MIT License**.
 
 <p align="center">
-  Built with ❤️ for Indian Merchants & Fintech Innovators.
+  Crafted for High-Growth Indian Merchants, D2C Brands & FinTech Innovators.
 </p>
