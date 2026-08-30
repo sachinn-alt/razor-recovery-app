@@ -28,9 +28,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="brand-wrapper">
-        <div className="brand" title="RazorRecovery.AI">
+        <div className="brand" title="RazorRecovery">
           <div className="brand-icon">
-            <img src="/app-icon.png" alt="Razor Recovery AI" className="brand-icon-img" />
+            <img src="/app-icon.png" alt="RazorRecovery Logo" className="brand-icon-img" />
           </div>
           <AnimatePresence>
             {isHovered && (
@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               >
-                <span>Razor</span>Recovery<span className="brand-accent">.AI</span>
+                <span>Razor</span><span className="brand-accent">Recovery</span>
               </motion.div>
             )}
           </AnimatePresence>

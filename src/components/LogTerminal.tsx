@@ -27,7 +27,7 @@ export const LogTerminal: React.FC<LogTerminalProps> = ({ logs, clearLogs }) => 
       >
         <div className="terminal-title">
           <i className="fa-solid fa-terminal" />
-          <span>RazorRecovery.AI Autonomous Agent Live Log Terminal</span>
+          <span>RazorRecovery Autonomous Agent Live Log Terminal</span>
           <span className="terminal-counter-tag">({logs.length} logs)</span>
         </div>
         <div className="terminal-actions" onClick={(e) => e.stopPropagation()}>

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { LogTerminal } from './components/LogTerminal';
 import { DashboardTab } from './components/DashboardTab';
 import { SimulatorTab } from './components/SimulatorTab';
 import { PlaygroundTab } from './components/PlaygroundTab';
 import { SettingsTab } from './components/SettingsTab';
+import { HostedCheckout } from './components/HostedCheckout';
 
 import type { Transaction, AgentLog, ChatState } from './types';
 import { useBatchSimulator } from './hooks/useBatchSimulator';
@@ -13,26 +14,39 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState<boolean>(false);
-  
+  const [directPayTxId, setDirectPayTxId] = useState<string | null>(null);
+
+  // Check URL hash or search params for standalone /pay/:id route
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payQuery = params.get('pay');
+    const hash = window.location.hash;
+
+    if (payQuery) {
+      setDirectPayTxId(payQuery);
+    } else if (hash.startsWith('#pay/')) {
+      setDirectPayTxId(hash.replace('#pay/', ''));
+    }
+  }, []);
+
   // Terminal logs
   const [logs, setLogs] = useState<AgentLog[]>([
     {
       id: 'log_init_1',
       timestamp: new Date().toLocaleTimeString(),
       source: 'SYSTEM',
-      message: 'RazorRecovery.AI React environment initialized. Webhook listener attached.',
+      message: 'RazorRecovery Enterprise Platform initialized with Drip Cadence & Bank Radar.',
       type: 'info'
     },
     {
       id: 'log_init_2',
       timestamp: new Date().toLocaleTimeString(),
       source: 'SYSTEM',
-      message: 'Loaded 55 synthetic failed transaction records from data.ts. Ready to simulate.',
+      message: 'SQLite WAL database & 1-Click Hosted Micro-Checkout endpoints active.',
       type: 'info'
     }
   ]);
 
-  // Helper log utility
   const addLog = (
     source: AgentLog['source'],
     message: string,
@@ -68,7 +82,7 @@ export const App: React.FC = () => {
 
   // Settings
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    `You are RazorRecovery.AI, an automated collection and revenue recovery assistant for Acme India Corp.\nYour tone is helpful, compliant, polite, and reassuring.\nExplain why the payment failed using natural language.\nProvide the secure checkout link.\nOffer alternative payment methods if requested.\nMaintain professional compliance; do not spam or make aggressive demands.\nStop immediately if the customer requests to opt-out or stop messages.`
+    `You are RazorRecovery, an automated collection and revenue recovery assistant for Acme India Corp.\nYour tone is helpful, compliant, polite, and reassuring.\nExplain why the payment failed using natural language.\nProvide the secure checkout link.\nOffer alternative payment methods if requested.\nMaintain professional compliance; do not spam or make aggressive demands.\nStop immediately if the customer requests to opt-out or stop messages.`
   );
   const [maxRetries, setMaxRetries] = useState<number>(3);
   const [maxDiscount, setMaxDiscount] = useState<number>(5);
@@ -82,7 +96,7 @@ export const App: React.FC = () => {
     "Alert: Payment of Rs. {{amount}} failed for {{productName}}. Secure checkout link: {{checkoutLink}}"
   );
 
-  // Instantiate custom recovery simulator hook
+  // Custom recovery simulator hook
   const {
     simState,
     simDelay,
@@ -99,29 +113,27 @@ export const App: React.FC = () => {
     visaOutage,
     mastercardOutage,
     upiOutage,
+    addLog,
     waTemplate,
     emailTemplate,
-    smsTemplate,
-    addLog,
+    smsTemplate
   });
 
-  // Playground Interactive state
   const [chatState, setChatState] = useState<ChatState>({
-    customerName: "Rahul Sharma",
-    customerEmail: "rahul.sharma@example.com",
-    customerPhone: "+91 98765 43210",
-    failureReason: "3D Secure OTP verification timed out during bank checkout",
+    customerName: 'Rahul Sharma',
+    customerPhone: '+91 98765 43210',
+    customerEmail: 'rahul.sharma@example.com',
+    failureReason: '3D Secure OTP verification timed out on customer device',
     amount: 4499.00,
     originalAmount: 4499.00,
-    productName: "Premium Cloud Annual Subscription",
+    productName: 'Annual Pro Subscription',
     discountApplied: false,
-    paymentMethod: "upi",
-    currentTxId: "pay_failed_001",
+    paymentMethod: 'credit_card',
+    currentTxId: 'pay_rec_1001',
     optedOut: false,
-    status: "Failed"
+    status: 'Failed'
   });
 
-  // Transaction mutation helper
   const updateTransactionStatus = (
     id: string,
     status: Transaction['status'],
@@ -129,16 +141,20 @@ export const App: React.FC = () => {
     recoveredAmt?: number,
     ptpDate?: string
   ) => {
-    setBatchData(prev => 
+    setBatchData(prev =>
       prev.map(tx => {
         if (tx.id === id) {
-          return {
+          const updated = {
             ...tx,
             status,
-            notes,
-            amount: recoveredAmt !== undefined ? recoveredAmt : tx.amount,
-            ptpDate: ptpDate !== undefined ? ptpDate : tx.ptpDate,
+            notes: notes || tx.notes,
+            attempts: tx.attempts + 1,
+            ptpDate: ptpDate || tx.ptpDate
           };
+          if (status === 'Recovered' && recoveredAmt) {
+            addLog('AGENT', `Order recovered for ${tx.customerName}: ₹${recoveredAmt.toFixed(2)} [${id}] via 1-Tap Recovery.`, 'success');
+          }
+          return updated;
         }
         return tx;
       })
@@ -146,10 +162,10 @@ export const App: React.FC = () => {
   };
 
   const handleManualNudge = (id: string) => {
-    setBatchData(prev => 
+    setBatchData(prev =>
       prev.map(tx => {
         if (tx.id === id) {
-          addLog('AGENT', `Dispatched MANUAL nudge to ${tx.customerName} for ${tx.id}`, 'warning');
+          addLog('CADENCE', `Dispatched next cadence nudge to ${tx.customerName} for ${tx.id}`, 'warning');
           return {
             ...tx,
             status: 'Recovering' as const,
@@ -162,10 +178,10 @@ export const App: React.FC = () => {
   };
 
   const handleManualEscalate = (id: string) => {
-    setBatchData(prev => 
+    setBatchData(prev =>
       prev.map(tx => {
         if (tx.id === id) {
-          addLog('AGENT', `Escalating transaction ${tx.id} for manual merchant processing`, 'error');
+          addLog('AGENT', `Escalating transaction ${tx.id} for manual merchant review`, 'error');
           return {
             ...tx,
             status: 'Escalated' as const
@@ -192,56 +208,82 @@ export const App: React.FC = () => {
       status: tx.status
     });
     setActiveTab('playground');
-    addLog('PLAYGROUND', `Loaded customer dues context for ${tx.customerName} (${tx.id}) into Playground chat.`, 'info');
+    addLog('PLAYGROUND', `Loaded customer dues context for ${tx.customerName} (${tx.id}) into WhatsApp chat.`, 'info');
   };
 
   const handlePaymentSuccess = (recoveredAmt: number) => {
-    addLog('PLAYGROUND', `Customer finalized payment. captured transaction value: ₹${recoveredAmt.toFixed(2)}`, 'success');
+    addLog('PLAYGROUND', `Customer finalized payment. Captured transaction value: ₹${recoveredAmt.toFixed(2)}`, 'success');
   };
 
   const handleAddTransaction = (newTx: Transaction) => {
     setBatchData(prev => [newTx, ...prev]);
-    // Register in backend SQLite database
-    fetch('http://localhost:3001/api/transactions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: newTx.id,
-        customerName: newTx.customerName,
-        customerEmail: newTx.email,
-        customerPhone: newTx.phone,
-        amount: newTx.amount,
-        failureCode: newTx.initialErrorCode,
-        failureReason: newTx.notes,
-        paymentMethod: 'card'
-      })
-    }).catch(() => {});
     addLog('SYSTEM', `Injected new failed transaction: ${newTx.customerName} (₹${newTx.amount.toFixed(2)}) [${newTx.id}] into recovery pipeline.`, 'info');
   };
 
-  // Helper count of completed simulation elements
   const processedCount = batchData.filter(t => t.status === 'Recovered' || t.status === 'Escalated').length;
+
+  // Render standalone customer recovery checkout if accessed via direct link
+  if (directPayTxId) {
+    const directTx = batchData.find(t => t.id === directPayTxId) || {
+      id: directPayTxId,
+      customerName: 'Valued Customer',
+      email: 'customer@example.com',
+      phone: '+919876543210',
+      productName: 'Acme India Order #' + directPayTxId.slice(-4),
+      amount: 4499.00,
+      status: 'Failed' as const
+    };
+
+    return (
+      <HostedCheckout
+        isModal={false}
+        checkoutData={{
+          transactionId: directTx.id,
+          customerName: directTx.customerName,
+          customerEmail: directTx.email,
+          customerPhone: directTx.phone,
+          productName: directTx.productName,
+          originalAmount: directTx.amount,
+          discountPercentage: 5,
+          discountAmount: (directTx.amount * 5) / 100,
+          finalAmount: Math.round(directTx.amount * 0.95),
+          currency: 'INR',
+          cartExpiresAt: new Date(Date.now() + 15 * 60000).toISOString(),
+          recommendedMethod: 'UPI Intent (Google Pay / PhonePe)',
+          status: directTx.status === 'Recovered' ? 'completed' : 'active',
+          merchantName: 'Acme India Corp'
+        }}
+        onPaySuccess={(txId, method) => {
+          updateTransactionStatus(txId, 'Recovered', `Paid via ${method}`, directTx.amount);
+        }}
+        onClose={() => {
+          setDirectPayTxId(null);
+          window.location.hash = '';
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`app-container ${isSidebarHovered ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         isHovered={isSidebarHovered}
         setIsHovered={setIsSidebarHovered}
       />
-      
+
       <main className="main-content">
         <header className="header">
           <div className="header-title">
             <h1 id="main-heading">Revenue Recovery Console</h1>
             <p className="header-subtitle">Real-time payment failure diagnosis & autonomous recovery campaigns.</p>
           </div>
-          
+
           <div className="header-actions">
             <div className="simulator-quick-controls">
-              <button 
-                className="btn btn-primary btn-sm" 
+              <button
+                className="btn btn-primary btn-sm"
                 onClick={() => { setActiveTab('simulator'); startSimulation(); }}
                 disabled={simState === 'running'}
                 id="quick-start-sim"
@@ -249,7 +291,7 @@ export const App: React.FC = () => {
                 <i className="fa-solid fa-play" /> Run Batch Sim
               </button>
             </div>
-            
+
             <div className="merchant-profile">
               <div className="merchant-avatar">
                 <i className="fa-solid fa-store" />

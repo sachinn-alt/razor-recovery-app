@@ -58,6 +58,10 @@ db.exec(`
     risk_score REAL DEFAULT 0.0,
     recovery_link TEXT,
     discount_applied REAL DEFAULT 0.0,
+    cart_expires_at DATETIME,
+    reconciled_utr TEXT,
+    cadence_stage INTEGER DEFAULT 1,
+    resolved_method TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     recovered_at DATETIME
   );
@@ -65,6 +69,10 @@ db.exec(`
 addColumnIfNotExists('transactions', 'merchant_id', "TEXT NOT NULL DEFAULT 'mid_acme_india'");
 addColumnIfNotExists('transactions', 'recovery_link', 'TEXT');
 addColumnIfNotExists('transactions', 'discount_applied', 'REAL DEFAULT 0.0');
+addColumnIfNotExists('transactions', 'cart_expires_at', 'DATETIME');
+addColumnIfNotExists('transactions', 'reconciled_utr', 'TEXT');
+addColumnIfNotExists('transactions', 'cadence_stage', 'INTEGER DEFAULT 1');
+addColumnIfNotExists('transactions', 'resolved_method', 'TEXT');
 
 // 3. Processed Events Table (Idempotency)
 db.exec(`
@@ -127,10 +135,63 @@ db.exec(`
   );
 `);
 
+// 7. Drip Cadence Sequences Table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS drip_cadences (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    merchant_id TEXT NOT NULL DEFAULT 'mid_acme_india',
+    step_number INTEGER NOT NULL,
+    offset_minutes INTEGER NOT NULL,
+    channel TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message_preview TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    scheduled_time DATETIME NOT NULL,
+    executed_at DATETIME,
+    discount_offered REAL DEFAULT 0.0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// 8. Bank Health Radar Table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bank_health (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    success_rate REAL NOT NULL,
+    avg_latency_ms INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    trend TEXT NOT NULL,
+    recommendation TEXT,
+    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// 9. Reconciliations Table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reconciliations (
+    id TEXT PRIMARY KEY,
+    transaction_id TEXT NOT NULL,
+    merchant_id TEXT NOT NULL DEFAULT 'mid_acme_india',
+    customer_name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    bank_name TEXT NOT NULL,
+    utr_number TEXT NOT NULL,
+    arn_number TEXT,
+    status TEXT NOT NULL DEFAULT 'Auto-Reconciled',
+    detected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    whatsapp_notice_sent INTEGER DEFAULT 1
+  );
+`);
+
 // Create Indexes
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tx_merchant_status ON transactions(merchant_id, status);
   CREATE INDEX IF NOT EXISTS idx_tx_created_at ON transactions(created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_cadence_tx ON drip_cadences(transaction_id, step_number);
   CREATE INDEX IF NOT EXISTS idx_processed_events_time ON processed_events(processed_at);
 `);
 
@@ -149,14 +210,34 @@ insertMerchant.run(
   'INR'
 );
 
+// Seed Bank Health Radar
+const insertBankHealth = db.prepare(`
+  INSERT OR REPLACE INTO bank_health (code, name, type, success_rate, avg_latency_ms, status, trend, recommendation)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`);
+
+const initialBankHealth = [
+  ['HDFC_NB', 'HDFC Bank Netbanking', 'Netbanking', 71.4, 3850, 'Degraded', 'degrading', 'High OTP failure rate. Steering checkout to HDFC UPI Intent.'],
+  ['SBI_UPI', 'State Bank of India (UPI)', 'UPI', 94.8, 820, 'Healthy', 'stable', 'Healthy switch. Recommended for 1-click fallback.'],
+  ['ICICI_CARDS', 'ICICI Bank Credit Cards', 'Cards', 98.2, 540, 'Healthy', 'improving', 'Optimal route for 3DS 2.0 transactions.'],
+  ['AXIS_NB', 'Axis Bank Netbanking', 'Netbanking', 82.5, 2100, 'Degraded', 'stable', 'Moderate latency during peak load.'],
+  ['RAZORPAY_UPI', 'Razorpay Turbo UPI Switch', 'UPI', 99.4, 310, 'Healthy', 'improving', 'Recommended instant 1-tap recovery route.'],
+  ['PAYTM_WALLET', 'Paytm Payments Gateway', 'Wallet', 96.1, 640, 'Healthy', 'stable', 'Low friction fallback for micro-tickets < ₹2,000.']
+];
+
+for (const bank of initialBankHealth) {
+  insertBankHealth.run(...bank);
+}
+console.log('✅ Initialized Bank Health Radar Telemetry.');
+
 // Check if transactions exist, else seed
 const countQuery = db.prepare('SELECT count(*) as count FROM transactions');
 const countResult = countQuery.get();
 
 if (countResult.count === 0) {
   const insertTx = db.prepare(`
-    INSERT INTO transactions (id, merchant_id, customer_name, customer_email, customer_phone, amount, currency, status, failure_code, failure_reason, payment_method, risk_score)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO transactions (id, merchant_id, customer_name, customer_email, customer_phone, amount, currency, status, failure_code, failure_reason, payment_method, risk_score, cart_expires_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', '+15 minutes'))
   `);
 
   const initialTxs = [
@@ -179,8 +260,40 @@ if (countResult.count === 0) {
   insertProfile.run('+919876543210', 'mid_acme_india', 'Rahul Sharma', 'rahul@example.com', 'whatsapp', 'upi', 4499.00, 'Gold');
   insertProfile.run('+919876543211', 'mid_acme_india', 'Pooja Verma', 'pooja@example.com', 'whatsapp', 'upi', 12999.00, 'Platinum');
 
-  console.log('✅ Seeded SQLite database with initial multi-tenant recovery records.');
+  // Seed default drip cadence for pay_rec_1001
+  const insertCadence = db.prepare(`
+    INSERT OR REPLACE INTO drip_cadences (id, transaction_id, merchant_id, step_number, offset_minutes, channel, title, message_preview, status, scheduled_time, executed_at, discount_offered)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertCadence.run('cad_1001_1', 'pay_rec_1001', 'mid_acme_india', 1, 0, 'In-App', 'Instant 1-Click Fallback Bottom Sheet', 'Switch to 1-click UPI Intent', 'delivered', new Date().toISOString(), new Date().toISOString(), 0);
+  insertCadence.run('cad_1001_2', 'pay_rec_1001', 'mid_acme_india', 2, 5, 'WhatsApp', 'WhatsApp AI Conversational Recovery Nudge', 'Hi Rahul, complete your order with 1-click UPI', 'sent', new Date(Date.now() + 5 * 60000).toISOString(), new Date().toISOString(), 5);
+  insertCadence.run('cad_1001_3', 'pay_rec_1001', 'mid_acme_india', 3, 30, 'SMS', 'SMS Fallback with Short Checkout Link', 'Alert: Your cart reservation expires in 15m. Click to pay', 'pending', new Date(Date.now() + 30 * 60000).toISOString(), null, 5);
+  insertCadence.run('cad_1001_4', 'pay_rec_1001', 'mid_acme_india', 4, 1440, 'Email', 'Final Cart Expiration Warning + 5% Boost', 'Last chance to retain your reservation before release', 'pending', new Date(Date.now() + 1440 * 60000).toISOString(), null, 8);
+
+  console.log('✅ Seeded SQLite database with initial multi-tenant recovery records and drip sequences.');
 }
 
-console.log('🚀 Multi-Tenant Database initialized successfully with WAL Mode.');
+// Seed sample reconciliation record
+const countRecon = db.prepare('SELECT count(*) as count FROM reconciliations').get();
+if (countRecon.count === 0) {
+  const insertRecon = db.prepare(`
+    INSERT INTO reconciliations (id, transaction_id, merchant_id, customer_name, amount, bank_name, utr_number, arn_number, status, resolved_at, whatsapp_notice_sent)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), 1)
+  `);
+  insertRecon.run(
+    'rec_rev_9021',
+    'pay_rec_1002',
+    'mid_acme_india',
+    'Pooja Verma',
+    12999.00,
+    'HDFC Bank',
+    'UTR_HDFC_992817264501',
+    'ARN_748291039485728',
+    'Auto-Reconciled'
+  );
+  console.log('✅ Seeded auto-reconciled double debit dispute record.');
+}
+
+console.log('🚀 Multi-Tenant Database initialized successfully with WAL Mode & Advanced Recovery Tables.');
 db.close();

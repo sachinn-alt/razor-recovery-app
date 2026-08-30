@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Transaction } from '../types';
+import { HostedCheckout } from './HostedCheckout';
+import { CadenceTimeline } from './CadenceTimeline';
+import { BankHealthRadar } from './BankHealthRadar';
+import { ReconciliationModal } from './ReconciliationModal';
 
 interface DashboardTabProps {
   batchData: Transaction[];
@@ -23,7 +27,6 @@ interface RecoveryChartProps {
 export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
-  // SVG dimensions
   const svgWidth = 800;
   const svgHeight = 240;
   const margin = { top: 20, right: 30, bottom: 35, left: 70 };
@@ -31,10 +34,9 @@ export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
   const chartWidth = svgWidth - margin.left - margin.right;
   const chartHeight = svgHeight - margin.top - margin.bottom;
 
-  // Determine scales
   const maxVal = Math.max(
     ...history.map(d => Math.max(d.recovered, d.lost)),
-    50000 // default minimum upper bound
+    50000
   );
 
   const getX = (index: number) => {
@@ -46,7 +48,6 @@ export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
     return margin.top + chartHeight - (val / maxVal) * chartHeight;
   };
 
-  // Generate paths
   let recoveredPath = '';
   let lostPath = '';
 
@@ -55,7 +56,6 @@ export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
     lostPath = history.map((d, i) => `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.lost)}`).join(' ');
   }
 
-  // Grid levels (5 horizontal lines)
   const gridLevels = [0, 0.25, 0.5, 0.75, 1];
 
   const formatYLabel = (val: number) => {
@@ -67,7 +67,6 @@ export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       <svg width="100%" height="240" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ overflow: 'visible' }}>
-        {/* Horizontal Gridlines */}
         {gridLevels.map((lvl, idx) => {
           const val = lvl * maxVal;
           const y = getY(val);
@@ -92,111 +91,63 @@ export const RecoveryChart: React.FC<RecoveryChartProps> = ({ history }) => {
           );
         })}
 
-        {/* X Axis Labels */}
-        <text
-          x={margin.left}
-          y={svgHeight - 8}
-          textAnchor="start"
-          className="chart-axis-text"
-        >
+        <text x={margin.left} y={svgHeight - 8} textAnchor="start" className="chart-axis-text">
           Start
         </text>
-        <text
-          x={margin.left + chartWidth / 2}
-          y={svgHeight - 8}
-          textAnchor="middle"
-          className="chart-axis-text"
-        >
+        <text x={margin.left + chartWidth / 2} y={svgHeight - 8} textAnchor="middle" className="chart-axis-text">
           Simulation Progress (Ticks)
         </text>
-        <text
-          x={svgWidth - margin.right}
-          y={svgHeight - 8}
-          textAnchor="end"
-          className="chart-axis-text"
-        >
+        <text x={svgWidth - margin.right} y={svgHeight - 8} textAnchor="end" className="chart-axis-text">
           Count: {history.length - 1}
         </text>
 
-        {/* Lines */}
-        {history.length > 1 && (
-          <>
-            <path d={recoveredPath} className="chart-line-recovered" />
-            <path d={lostPath} className="chart-line-lost" />
-
-            {/* Points (Only show if history length is reasonable, e.g. < 60) */}
-            {history.length < 60 && history.map((d, i) => (
-              <g key={i}>
-                <circle
-                  cx={getX(i)}
-                  cy={getY(d.recovered)}
-                  r="3.5"
-                  className="chart-point recovered"
-                />
-                <circle
-                  cx={getX(i)}
-                  cy={getY(d.lost)}
-                  r="3.5"
-                  className="chart-point lost"
-                />
-              </g>
-            ))}
-          </>
+        {recoveredPath && (
+          <path d={recoveredPath} fill="none" className="chart-line recovered" strokeWidth="2.5" />
+        )}
+        {lostPath && (
+          <path d={lostPath} fill="none" className="chart-line lost" strokeWidth="2.5" />
         )}
 
-        {/* Interactive Hover Areas */}
-        {history.length > 1 && history.map((_, i) => {
-          const x = getX(i);
-          const colWidth = chartWidth / (history.length - 1);
-          return (
-            <rect
-              key={i}
-              x={x - colWidth / 2}
-              y={margin.top}
-              width={colWidth}
-              height={chartHeight}
-              fill="transparent"
+        {history.map((d, i) => (
+          <g key={i} className="chart-point-group">
+            <circle
+              cx={getX(i)}
+              cy={getY(d.recovered)}
+              r={hoveredIdx === i ? 6 : 3.5}
+              className="chart-point recovered"
               onMouseEnter={() => setHoveredIdx(i)}
               onMouseLeave={() => setHoveredIdx(null)}
-              style={{ cursor: 'pointer' }}
             />
-          );
-        })}
+            <circle
+              cx={getX(i)}
+              cy={getY(d.lost)}
+              r={hoveredIdx === i ? 6 : 3.5}
+              className="chart-point lost"
+              onMouseEnter={() => setHoveredIdx(i)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            />
+          </g>
+        ))}
 
-        {/* Hover Line & Tooltip rendering */}
-        {hoveredIdx !== null && hoveredIdx < history.length && (
-          <g>
-            {/* Vertical Guide Line */}
+        {hoveredIdx !== null && history[hoveredIdx] && (
+          <g className="chart-tooltip-group" transform={`translate(${getX(hoveredIdx)}, 10)`}>
             <line
-              x1={getX(hoveredIdx)}
+              x1="0"
               y1={margin.top}
-              x2={getX(hoveredIdx)}
+              x2="0"
               y2={margin.top + chartHeight}
-              className="chart-interactive-bar"
+              className="chart-hover-line"
             />
-
-            {/* Tooltip Box */}
             {(() => {
-              const xPos = getX(hoveredIdx);
-              // Shift tooltip left if it's near the right edge
-              const tooltipWidth = 160;
-              const tooltipHeight = 75;
-              const isRightSide = xPos > svgWidth - margin.right - 100;
-              const tx = isRightSide ? xPos - tooltipWidth - 15 : xPos + 15;
-              const ty = margin.top + 10;
-
+              const tooltipX = hoveredIdx > history.length / 2 ? -140 : 10;
               return (
-                <g transform={`translate(${tx}, ${ty})`}>
-                  <rect
-                    width={tooltipWidth}
-                    height={tooltipHeight}
-                    className="chart-tooltip-box"
-                  />
-                  <text x="12" y="20" className="chart-tooltip-title">
+                <g transform={`translate(${tooltipX}, 0)`} className="chart-tooltip-bubble">
+                  <rect width="130" height="64" rx="2" className="chart-tooltip-bg" />
+                  <text x="12" y="18" className="chart-tooltip-title">
                     Tick #{hoveredIdx}
                   </text>
-                  <text x="12" y="40" className="chart-tooltip-value recovered">
-                    Recovered: ₹{history[hoveredIdx].recovered.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  <text x="12" y="38" className="chart-tooltip-value recovered">
+                    Rec: ₹{history[hoveredIdx].recovered.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                   </text>
                   <text x="12" y="58" className="chart-tooltip-value lost">
                     Loss/Esc: ₹{history[hoveredIdx].lost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
@@ -220,20 +171,19 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   onEscalate,
   onSwitchToPlayground,
   onAddTransaction,
-  waTemplate,
-  emailTemplate,
-  smsTemplate,
 }) => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'failed' | 'recovering' | 'recovered' | 'escalated'>('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showBankHealth, setShowBankHealth] = useState(false);
+  const [checkoutModalTx, setCheckoutModalTx] = useState<Transaction | null>(null);
+  const [reconModalTx, setReconModalTx] = useState<Transaction | null>(null);
   const itemsPerPage = 12;
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search, statusFilter]);
 
-  // Metrics calculation
   let failedTotal = 0;
   let recoveredTotal = 0;
   let failedCount = 0;
@@ -257,7 +207,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     }
   });
 
-  const recoveryRate = failedCount > 0 ? (recoveredCount / failedCount) * 100 : 0;
+  const recoveryRate = (failedCount + recoveredCount) > 0 ? (recoveredCount / (failedCount + recoveredCount)) * 100 : 0;
+  const netMarginSaved = Math.max(0, recoveredTotal * 0.94);
 
   const formatCurrency = (num: number) => {
     return num.toLocaleString('en-IN', {
@@ -266,11 +217,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
     });
   };
 
-  // Filter list
   const filteredData = batchData.filter(tx => {
-    const matchesSearch = tx.customerName.toLowerCase().includes(search.toLowerCase()) || 
-                          tx.id.toLowerCase().includes(search.toLowerCase());
-    
+    const matchesSearch =
+      tx.customerName.toLowerCase().includes(search.toLowerCase()) ||
+      tx.id.toLowerCase().includes(search.toLowerCase());
+
     if (statusFilter === 'all') return matchesSearch;
     return matchesSearch && tx.status.toLowerCase() === statusFilter;
   });
@@ -280,30 +231,34 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCustName, setNewCustName] = useState('Aarav Mehta');
-  const [newCustEmail, setNewCustEmail] = useState('aarav.mehta@example.com');
-  const [newCustPhone, setNewCustPhone] = useState('+91 98765 12345');
-  const [newProduct, setNewProduct] = useState('E-commerce Checkout Cart');
   const [newAmount, setNewAmount] = useState('4499.00');
   const [newFailureType, setNewFailureType] = useState<Transaction['failureType']>('authentication_failed');
-  const [newNotes, setNewNotes] = useState('3D Secure OTP verification timed out on customer device');
 
   const handleCreateTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     const txId = `pay_fail_${Date.now().toString(36).toUpperCase()}`;
     const amountNum = parseFloat(newAmount) || 4499.00;
-    
+
     let errorCode = 'BAD_REQUEST_AUTHENTICATION_FAILED';
-    if (newFailureType === 'card_declined_insufficient_funds') errorCode = 'INSUFFICIENT_FUNDS';
-    else if (newFailureType === 'network_timeout') errorCode = 'GATEWAY_ERROR';
-    else if (newFailureType === 'mandate_registration_failed') errorCode = 'UPI_LIMIT_EXCEEDED';
+    let notes = '3D Secure OTP verification timed out on customer device';
+    if (newFailureType === 'card_declined_insufficient_funds') {
+      errorCode = 'INSUFFICIENT_FUNDS';
+      notes = 'Card declined due to insufficient balance';
+    } else if (newFailureType === 'network_timeout') {
+      errorCode = 'GATEWAY_ERROR';
+      notes = 'Bank gateway network timeout (503)';
+    } else if (newFailureType === 'mandate_registration_failed') {
+      errorCode = 'UPI_LIMIT_EXCEEDED';
+      notes = 'Daily transaction limit exceeded on customer VPA';
+    }
 
     const createdTx: Transaction = {
       id: txId,
       customerName: newCustName.trim() || 'Aarav Mehta',
-      email: newCustEmail.trim() || 'aarav.mehta@example.com',
-      phone: newCustPhone.trim() || '+91 98765 12345',
+      email: `${newCustName.toLowerCase().replace(/\s+/g, '')}@example.com`,
+      phone: '+91 98765 12345',
       amount: amountNum,
-      productName: newProduct.trim() || 'E-commerce Checkout Cart',
+      productName: 'E-commerce Checkout Cart',
       timestamp: new Date().toISOString(),
       failureType: newFailureType,
       initialErrorCode: errorCode,
@@ -311,177 +266,195 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       attempts: 0,
       maxAttempts: 3,
       recoveryChannel: 'WhatsApp',
-      notes: newNotes.trim() || 'Payment declined by issuing bank during checkout'
+      notes,
+      cartExpiresAt: new Date(Date.now() + 15 * 60000).toISOString()
     };
 
     if (onAddTransaction) {
       onAddTransaction(createdTx);
     }
-
     setIsAddModalOpen(false);
-  };
-
-  const handleApplyPreset = (preset: 'otp' | 'balance' | 'upi_limit' | 'gateway_503') => {
-    if (preset === 'otp') {
-      setNewFailureType('authentication_failed');
-      setNewNotes('3D Secure OTP verification timed out on customer device');
-    } else if (preset === 'balance') {
-      setNewFailureType('card_declined_insufficient_funds');
-      setNewNotes('Debit card transaction declined due to insufficient balance');
-    } else if (preset === 'upi_limit') {
-      setNewFailureType('mandate_registration_failed');
-      setNewNotes('Daily transaction limit exceeded for customer UPI VPA');
-    } else if (preset === 'gateway_503') {
-      setNewFailureType('network_timeout');
-      setNewNotes('Acquiring bank payment gateway timeout during high peak load');
-    }
   };
 
   const selectedTx = batchData.find(tx => tx.id === selectedTxId);
 
-  // Generate timeline helper
   const getTimelineEvents = (tx: Transaction) => {
     const events = [];
     const date = new Date(tx.timestamp);
 
     events.push({
       time: new Date(date.getTime() + 2000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      act: 'Webhook Received',
+      act: 'Webhook Captured',
       desc: `Event [payment.failed] captured. Root error code: ${tx.initialErrorCode}`,
       type: 'info'
     });
 
     events.push({
-      time: new Date(date.getTime() + 6000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      act: 'AI Diagnosis Logged',
-      desc: `Identified failure class: [${tx.failureType.toUpperCase()}]. Initiated sequence template.`,
+      time: new Date(date.getTime() + 4000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      act: 'Optimizer Routing',
+      desc: `Optimizer determined ${tx.failureType === 'card_declined_insufficient_funds' ? 'Cardless EMI / PayLater fallback' : '1-Click UPI Intent'}`,
       type: 'info'
     });
 
-    if (tx.attempts > 0 || tx.status === 'Recovering' || tx.status === 'Recovered' || tx.status === 'Escalated') {
+    if (tx.status === 'Recovering' || tx.status === 'Recovered') {
       events.push({
-        time: new Date(date.getTime() + 15000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        act: `Recovery Nudge Sent (#1)`,
-        desc: `Dispatched campaign link via ${tx.recoveryChannel}. Delivery confirmed.`,
-        type: tx.status === 'Failed' ? 'failed' : 'info'
-      });
-    }
-
-    if (tx.attempts > 1) {
-      events.push({
-        time: new Date(date.getTime() + 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        act: `Recovery Nudge Sent (#2) - Discount Applied`,
-        desc: `No response detected. Sent sequential nudge with 5% discount: rpy.to/rec_${tx.id}`,
-        type: 'info'
-      });
-    }
-
-    if (tx.attempts > 2) {
-      events.push({
-        time: new Date(date.getTime() + 120000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        act: `Recovery Nudge Sent (#3) - Split Payment Offer`,
-        desc: `Third sequence nudge dispatched. Offering split billing checkout terms.`,
+        time: new Date(date.getTime() + 8000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        act: 'Cadence Nudge Dispatched',
+        desc: `Dispatched 1-Click Hosted Checkout link with 15m Cart Lock.`,
         type: 'info'
       });
     }
 
     if (tx.status === 'Recovered') {
       events.push({
-        time: new Date(date.getTime() + (tx.attempts > 0 ? tx.attempts * 60000 : 30000)).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        act: 'Payment Recovered!',
-        desc: `Payment processed successfully via Razorpay test payment window. Status resolved.`,
+        time: new Date(date.getTime() + 15000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        act: 'Settlement Confirmed',
+        desc: `1-Tap settlement confirmed via ${tx.resolvedMethod || 'Turbo UPI'}. Downstream drip cancelled.`,
         type: 'success'
-      });
-    } else if (tx.status === 'Escalated') {
-      events.push({
-        time: new Date(date.getTime() + 180000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        act: 'Workflow Gated (Escalated)',
-        desc: `Intervention count exceeded max retries or user opted out. Flagged for manual merchant intervention.`,
-        type: 'failed'
       });
     }
 
     return events;
   };
 
-  const interpolateTemplate = (
-    template: string,
-    data: { customerName: string; amount: number; productName: string; notes: string; checkoutLink: string }
-  ) => {
-    return template
-      .replace(/\{\{customerName\}\}/g, data.customerName)
-      .replace(/\{\{amount\}\}/g, data.amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-      .replace(/\{\{productName\}\}/g, data.productName)
-      .replace(/\{\{notes\}\}/g, data.notes || 'a billing decline')
-      .replace(/\{\{checkoutLink\}\}/g, data.checkoutLink);
+  const handleCheckoutSuccess = (txId: string, method: string) => {
+    const target = batchData.find(t => t.id === txId);
+    if (target) {
+      target.status = 'Recovered';
+      target.resolvedMethod = method;
+    }
+    setCheckoutModalTx(null);
   };
 
-  // Nudge text helper
-  const getMockMessage = (tx: Transaction) => {
-    const mockLink = `rpy.to/rec_${tx.id}`;
-    let template = waTemplate;
-    if (tx.recoveryChannel === 'Email') template = emailTemplate;
-    else if (tx.recoveryChannel === 'SMS') template = smsTemplate;
-
-    return interpolateTemplate(template, {
-      customerName: tx.customerName,
-      amount: tx.amount,
-      productName: tx.productName,
-      notes: tx.notes,
-      checkoutLink: mockLink
-    });
+  const handleReconcileSuccess = (txId: string, utr: string) => {
+    const target = batchData.find(t => t.id === txId);
+    if (target) {
+      target.status = 'Recovered';
+      target.reconciledUtr = utr;
+      target.resolvedMethod = 'Auto-Reconciled';
+    }
+    setReconModalTx(null);
   };
 
-  // Metrics animations variants
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.1 }
+      transition: { staggerChildren: 0.05 }
     }
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 100 } }
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
   };
 
   return (
-    <section className="tab-content active" id="tab-dashboard">
-      <span className="section-index">01. OVERVIEW / BATCH STATUS</span>
-      
-      {/* Metrics Header Grid */}
-      <motion.div 
+    <div className="tab-content active" id="tab-dashboard">
+      {/* Executive ROI & Financial Impact Summary Banner - Compact 1-Row Ribbon */}
+      <motion.div
+        className="executive-roi-banner"
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="roi-items-container">
+          <div className="roi-stat-box">
+            <span className="roi-lbl">
+              <i className="fa-solid fa-vault text-primary" />
+              Gross GMV Rescued:
+            </span>
+            <span className="roi-val highlight">₹{formatCurrency(recoveredTotal)}</span>
+          </div>
+
+          <div className="roi-divider" />
+
+          <div className="roi-stat-box">
+            <span className="roi-lbl">
+              <i className="fa-solid fa-bullseye text-primary" />
+              Recovery Rate:
+            </span>
+            <span className="roi-val text-success">{recoveryRate.toFixed(1)}%</span>
+          </div>
+
+          <div className="roi-divider" />
+
+          <div className="roi-stat-box">
+            <span className="roi-lbl">
+              <i className="fa-solid fa-chart-line text-primary" />
+              Margin Saved:
+            </span>
+            <span className="roi-val">₹{formatCurrency(netMarginSaved)}</span>
+          </div>
+
+          <div className="roi-divider" />
+
+          <div className="roi-stat-box">
+            <span className="roi-lbl">
+              <i className="fa-solid fa-bolt text-primary" />
+              Top Rail:
+            </span>
+            <span className="roi-val" style={{ fontSize: '12px' }}>Turbo UPI (44.2%)</span>
+          </div>
+        </div>
+
+        <div className="roi-action-box">
+          <button
+            className={`btn-bank-radar-toggle ${showBankHealth ? 'active' : ''}`}
+            onClick={() => setShowBankHealth(!showBankHealth)}
+            title="Toggle Live Banking Gateway Telemetry"
+          >
+            <i className="fa-solid fa-satellite-dish" />
+            <span>{showBankHealth ? 'Hide Radar' : 'Bank Health Radar'}</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Real-Time Bank Outage & Downstream Health Radar */}
+      <AnimatePresence>
+        {showBankHealth && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{ marginBottom: '20px', overflow: 'hidden' }}
+          >
+            <BankHealthRadar />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* KPI Cards Grid */}
+      <motion.div
         className="metrics-grid"
         variants={containerVariants}
         initial="hidden"
         animate="show"
       >
-        <motion.div variants={itemVariants} className="metric-card" id="metric-failed-revenue">
+        <motion.div variants={itemVariants} className="metric-card" id="metric-failed-amount">
           <div className="metric-header">
-            <span className="metric-title">Revenue at Risk</span>
-            <div className="metric-icon-box risk">
+            <span className="metric-title">Failed Revenue</span>
+            <div className="metric-icon-box failed">
               <i className="fa-solid fa-triangle-exclamation" />
             </div>
           </div>
           <div className="metric-value">₹{formatCurrency(failedTotal)}</div>
           <div className="metric-footer">
-            <span className="metric-desc">Total Failed Transactions</span>
-            <span className="metric-count" id="count-failed-tx">{failedCount}</span>
+            <span className="metric-desc">{failedCount} Failed Checkouts</span>
+            <span className="metric-trend text-danger"><i className="fa-solid fa-arrow-up" /> Gateway Friction</span>
           </div>
         </motion.div>
 
-        <motion.div variants={itemVariants} className="metric-card" id="metric-recovered-revenue">
+        <motion.div variants={itemVariants} className="metric-card" id="metric-recovered-amount">
           <div className="metric-header">
             <span className="metric-title">Recovered Revenue</span>
             <div className="metric-icon-box recovered">
-              <i className="fa-solid fa-circle-check" />
+              <i className="fa-solid fa-shield-halved" />
             </div>
           </div>
-          <div className="metric-value text-recovered">₹{formatCurrency(recoveredTotal)}</div>
+          <div className="metric-value text-success">₹{formatCurrency(recoveredTotal)}</div>
           <div className="metric-footer">
-            <span className="metric-desc">Recovered Payments</span>
-            <span className="metric-count text-recovered" id="count-recovered-tx">{recoveredCount}</span>
+            <span className="metric-desc">{recoveredCount} Orders Rescued</span>
+            <span className="metric-trend text-success"><i className="fa-solid fa-arrow-trend-up" /> +35.4% Lift</span>
           </div>
         </motion.div>
 
@@ -489,34 +462,33 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="metric-header">
             <span className="metric-title">Recovery Rate</span>
             <div className="metric-icon-box rate">
-              <i className="fa-solid fa-chart-pie" />
+              <i className="fa-solid fa-chart-line" />
             </div>
           </div>
-          <div className="metric-value text-rate">{recoveryRate.toFixed(1)}%</div>
+          <div className="metric-value">{recoveryRate.toFixed(1)}%</div>
           <div className="metric-footer">
-            <div className="progress-bar-container">
-              <div className="progress-bar" id="progress-recovery-rate" style={{ width: `${recoveryRate}%` }} />
-            </div>
+            <span className="metric-desc">Target: 30.0%</span>
+            <span className="metric-trend text-success"><i className="fa-solid fa-bullseye" /> Top Tier</span>
           </div>
         </motion.div>
 
         <motion.div variants={itemVariants} className="metric-card" id="metric-active-interventions">
           <div className="metric-header">
-            <span className="metric-title">Active Retries</span>
+            <span className="metric-title">Active Drip Retries</span>
             <div className="metric-icon-box active-retries">
               <i className="fa-solid fa-arrows-spin fa-spin" />
             </div>
           </div>
           <div className="metric-value">{activeRetries}</div>
           <div className="metric-footer">
-            <span className="metric-desc">In Recovery Pipeline</span>
-            <span className="metric-trend text-warning"><i className="fa-solid fa-clock" /> Live Nudges</span>
+            <span className="metric-desc">In Multi-Touch Pipeline</span>
+            <span className="metric-trend text-warning"><i className="fa-solid fa-clock" /> Scheduled Nudges</span>
           </div>
         </motion.div>
       </motion.div>
 
       {/* Recovery Performance Chart */}
-      <motion.div 
+      <motion.div
         className="card recovery-chart-card"
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -537,9 +509,8 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </div>
       </motion.div>
 
-      {/* Main split */}
+      {/* Main Split: Table + Inspector Drawer */}
       <div className="dashboard-split">
-        
         {/* Left Side Table */}
         <div className="card transaction-monitor">
           <div className="card-header">
@@ -560,11 +531,11 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
               <div className="search-box">
                 <i className="fa-solid fa-magnifying-glass" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   className="search-input"
-                  id="tx-search-input" 
-                  placeholder="Search by name, ID..." 
+                  id="tx-search-input"
+                  placeholder="Search by name, ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -582,7 +553,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="table-container">
             <table className="tx-table" id="transaction-table">
               <thead>
@@ -591,9 +562,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   <th>Customer</th>
                   <th>Product</th>
                   <th>Amount</th>
-                  <th>Failure Root Cause</th>
+                  <th>Failure Reason</th>
                   <th>Status</th>
-                  <th>Action</th>
+                  <th>Quick Action</th>
                 </tr>
               </thead>
               <tbody id="transaction-table-body">
@@ -602,9 +573,9 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     let friendlyReason = tx.failureType.split('_').join(' ');
                     friendlyReason = friendlyReason.charAt(0).toUpperCase() + friendlyReason.slice(1);
                     const isSelected = selectedTxId === tx.id;
-                    
+
                     return (
-                      <motion.tr 
+                      <motion.tr
                         key={tx.id}
                         layoutId={`row_${tx.id}`}
                         onClick={() => setSelectedTxId(tx.id)}
@@ -623,15 +594,30 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                           <span className={`status-badge ${tx.status.toLowerCase()}`}>{tx.status}</span>
                         </td>
                         <td>
-                          <button 
-                            className="btn btn-outline btn-sm inspect-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedTxId(tx.id);
-                            }}
-                          >
-                            Inspect
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              className="btn-action-pill pay"
+                              title="Test 1-Click Customer Checkout"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCheckoutModalTx(tx);
+                              }}
+                            >
+                              <i className="fa-solid fa-bolt" style={{ marginRight: '4px' }} />
+                              1-Tap Pay
+                            </button>
+                            <button
+                              className="btn-action-pill recon"
+                              title="Resolve Double Debit / UTR Dispute"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReconModalTx(tx);
+                              }}
+                            >
+                              <i className="fa-solid fa-shield-halved" style={{ marginRight: '4px' }} />
+                              Reconcile
+                            </button>
+                          </div>
                         </td>
                       </motion.tr>
                     );
@@ -645,10 +631,10 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 <p>No transactions found matching the filter.</p>
               </div>
             )}
-            
+
             {totalPages > 1 && (
               <div className="table-pagination">
-                <button 
+                <button
                   className="btn btn-outline btn-xs"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
@@ -658,7 +644,7 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 <span className="pagination-info">
                   Page {currentPage} of {totalPages}
                 </span>
-                <button 
+                <button
                   className="btn btn-outline btn-xs"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
@@ -670,39 +656,41 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </div>
         </div>
 
-        {/* Right Side Drawer / Details Panel */}
+        {/* Right Side Drawer / Details Panel with Cadence Visualizer */}
         <div className="detail-sidebar" id="detail-inspector-panel">
           <AnimatePresence mode="wait">
             {!selectedTx ? (
-              <motion.div 
+              <motion.div
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="inspector-empty-state swiss-dots" 
+                className="inspector-empty-state swiss-dots"
                 id="inspector-empty-state"
                 style={{ padding: '48px 24px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}
               >
                 <div className="empty-gfx" style={{ fontSize: '32px', marginBottom: '16px' }}>
-                  <i className="fa-solid fa-microchip-ai" />
+                  <i className="fa-solid fa-microchip" />
                 </div>
                 <h3>AI Agent Auditor</h3>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>Select any failed transaction from the log to audit the AI's diagnostic reasoning, view communication drafts, and trace the recovery pipeline.</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  Select any transaction to inspect the live 4-stage Drip Cadence sequence, launch 1-Click Checkout, or audit AI diagnostics.
+                </p>
               </motion.div>
             ) : (
-              <motion.div 
+              <motion.div
                 key={selectedTx.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="detail-scrollable" 
+                className="detail-scrollable"
                 id="inspector-content"
               >
                 {/* Header */}
                 <div className="detail-header">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span className="section-index">03. AUDIT PANEL</span>
+                    <span className="section-index">03. RECOVERY INSPECTOR</span>
                     <h3 className="detail-title" id="ins-customer-name">{selectedTx.customerName}</h3>
                     <span className="inspector-id" id="ins-tx-id" style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>{selectedTx.id}</span>
                   </div>
@@ -711,26 +699,50 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                   </span>
                 </div>
 
-                <div style={{ padding: '24px 0' }}>
-                  <div className="info-grid" style={{ marginBottom: '24px' }}>
+                <div style={{ padding: '16px 0' }}>
+                  <div className="info-grid" style={{ marginBottom: '16px' }}>
                     <div className="info-item">
-                      <strong>Product / Service</strong>
+                      <strong>Product / Order</strong>
                       <span id="ins-product-name">{selectedTx.productName}</span>
                     </div>
                     <div className="info-item">
                       <strong>Payment Amount</strong>
-                      <span id="ins-amount" style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>₹{formatCurrency(selectedTx.amount)}</span>
+                      <span id="ins-amount" style={{ color: 'var(--color-primary)', fontWeight: 'bold', fontFamily: 'var(--font-mono)' }}>
+                        ₹{formatCurrency(selectedTx.amount)}
+                      </span>
                     </div>
                     <div className="info-item">
-                      <strong>Phone / Email</strong>
-                      <span>{selectedTx.phone} / {selectedTx.email}</span>
+                      <strong>Contact</strong>
+                      <span>{selectedTx.phone}</span>
                     </div>
                   </div>
 
-                  {/* RCA */}
+                  {/* 1-Click Checkout Launch Trigger */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <button
+                      className="btn-launch-checkout-cta"
+                      onClick={() => setCheckoutModalTx(selectedTx)}
+                    >
+                      <span>
+                        <i className="fa-solid fa-bolt" style={{ marginRight: '8px' }} />
+                        Open 1-Click Hosted Checkout Preview
+                      </span>
+                      <span className="btn-badge">15m Cart Lock</span>
+                    </button>
+                  </div>
+
+                  {/* Embedded Multi-Touch Drip Cadence Engine */}
+                  <div className="timeline-section" style={{ marginBottom: '20px' }}>
+                    <CadenceTimeline
+                      transaction={selectedTx}
+                      onSimulateRecovery={(txId) => handleCheckoutSuccess(txId, 'UPI_INTENT')}
+                    />
+                  </div>
+
+                  {/* AI Diagnosis & RCA */}
                   <div className="timeline-section">
                     <h4 className="section-title" style={{ fontSize: '12px', marginBottom: '12px' }}>
-                      <i className="fa-solid fa-magnifying-glass-chart" /> 03.1 AI DIAGNOSIS & RCA
+                      <i className="fa-solid fa-magnifying-glass-chart" /> 03.2 AI DIAGNOSIS & SMART ROUTING
                     </h4>
                     <div className="preview-box">
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #000', paddingBottom: '4px' }}>
@@ -740,20 +752,18 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>{selectedTx.notes}</p>
                       <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                         Strategy: <span style={{ color: 'var(--color-primary)' }}>
-                          {selectedTx.failureType.includes('invoice_overdue') ? 'B2B Receivables Chaser - Net Credit Email Escalations' :
-                           selectedTx.failureType === 'card_declined_insufficient_funds' ? 'WhatsApp Link + Smart Retries' : 
-                           selectedTx.failureType === 'checkout_abandoned' ? 'Dynamic Nudge + Micro-discount Offer' : 
-                           selectedTx.failureType === 'mandate_registration_failed' ? 'UPI Autopay Migration Campaign' : 
-                           'WhatsApp Checkout Link + Dynamic Escalations'}
+                          {selectedTx.failureType === 'card_declined_insufficient_funds' ? 'Cardless EMI / PayLater fallback' :
+                           selectedTx.failureType === 'mandate_registration_failed' ? 'UPI Autopay Migration Campaign' :
+                           '1-Click WhatsApp Express Recovery'}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Timeline */}
-                  <div className="timeline-section">
+                  {/* Workflow Audit Trail */}
+                  <div className="timeline-section" style={{ marginTop: '16px' }}>
                     <h4 className="section-title" style={{ fontSize: '12px', marginBottom: '12px' }}>
-                      <i className="fa-solid fa-clock-rotate-left" /> 03.2 WORKFLOW AUDIT TRAIL
+                      <i className="fa-solid fa-clock-rotate-left" /> 03.3 WORKFLOW AUDIT TRAIL
                     </h4>
                     <ul className="timeline" id="ins-timeline">
                       {getTimelineEvents(selectedTx).map((ev, index) => (
@@ -768,300 +778,130 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                     </ul>
                   </div>
 
-                  {/* Outbox preview */}
-                  <div className="timeline-section">
-                    <h4 className="section-title" style={{ fontSize: '12px', marginBottom: '12px' }}>
-                      <i className="fa-solid fa-paper-plane" /> 03.3 COMMUNICATION OUTBOX
-                    </h4>
-                    <div className="preview-box swiss-diagonal" style={{ padding: '16px' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '6px', color: 'var(--color-primary)' }}>
-                        CHANNEL: {selectedTx.recoveryChannel.toUpperCase()}
-                      </div>
-                      <p style={{ fontSize: '11px', lineHeight: '1.4' }}>
-                        {getMockMessage(selectedTx).split(`rpy.to/rec_${selectedTx.id}`).map((part, index, arr) => (
-                          <React.Fragment key={index}>
-                            {part}
-                            {index < arr.length - 1 && (
-                              <a 
-                                href="#" 
-                                className="wa-checkout-link" 
-                                id="ins-mock-link"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  onSwitchToPlayground(selectedTx);
-                                }}
-                              >
-                                rpy.to/rec_{selectedTx.id}
-                              </a>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </p>
-                    </div>
-
-                    <div className="action-buttons" style={{ marginTop: '16px' }}>
-                      {selectedTx.status === 'Failed' || selectedTx.status === 'Recovering' ? (
-                        <>
-                          <button 
-                            className="btn btn-primary btn-sm"
-                            onClick={() => onNudge(selectedTx.id)}
-                          >
-                            Force Nudge
-                          </button>
-                          <button 
-                            className="btn btn-outline btn-sm"
-                            onClick={() => onEscalate(selectedTx.id)}
-                          >
-                            Escalate Fail
-                          </button>
-                        </>
-                      ) : (
-                        <button className="btn btn-outline btn-sm" style={{ gridColumn: 'span 2' }} disabled>
-                          Action Completed
-                        </button>
-                      )}
-                    </div>
+                  {/* Actions */}
+                  <div className="action-buttons" style={{ marginTop: '20px', display: 'flex', gap: '8px' }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ flex: 1 }}
+                      onClick={() => onSwitchToPlayground(selectedTx)}
+                    >
+                      <i className="fa-brands fa-whatsapp" style={{ marginRight: '6px' }} />
+                      Test AI Chat
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: 1 }}
+                      onClick={() => onNudge(selectedTx.id)}
+                    >
+                      <i className="fa-solid fa-paper-plane" style={{ marginRight: '6px' }} />
+                      Nudge
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ flex: 1 }}
+                      onClick={() => onEscalate(selectedTx.id)}
+                    >
+                      <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: '6px' }} />
+                      Escalate
+                    </button>
                   </div>
                 </div>
-
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
       </div>
 
-      {/* Promise-to-Pay Audit Panel */}
-      <motion.div 
-        className="card ptp-audit-card swiss-grid-pattern"
-        style={{ marginTop: '24px' }}
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="card-header" style={{ borderBottom: '2px solid var(--border-color)', paddingBottom: '16px' }}>
-          <div>
-            <span className="section-index">04. PROMISE-TO-PAY AUDIT LEDGER</span>
-            <h2>Active Payment Commitments</h2>
-            <p>Reminders are temporarily silenced for accounts with registered payment dates.</p>
-          </div>
-        </div>
-        <div className="card-body" style={{ paddingTop: '20px' }}>
-          {batchData.filter(tx => tx.ptpDate).length === 0 ? (
-            <div className="empty-state" style={{ padding: '24px 0' }}>
-              <i className="fa-regular fa-calendar-check" style={{ fontSize: '24px', marginBottom: '8px', opacity: 0.6 }} />
-              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No active payment promises registered.</p>
-            </div>
-          ) : (
-            <div className="ptp-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {batchData.filter(tx => tx.ptpDate).map(tx => {
-                const daysRemaining = Math.max(0, Math.ceil((new Date(tx.ptpDate!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
-                return (
-                  <div key={tx.id} className="ptp-card" style={{
-                    border: '2px solid var(--border-color)',
-                    padding: '16px',
-                    backgroundColor: 'var(--bg-secondary)',
-                    position: 'relative'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span className="tag" style={{
-                        backgroundColor: 'var(--color-primary)',
-                        color: '#000',
-                        fontSize: '9px',
-                        fontWeight: 'bold',
-                        padding: '2px 6px',
-                        textTransform: 'uppercase',
-                        borderRadius: '0'
-                      }}>
-                        {tx.recoveryChannel} PTP
-                      </span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', fontWeight: 'bold' }}>{tx.id}</span>
-                    </div>
+      {/* 1-Click Hosted Checkout Preview Modal */}
+      {checkoutModalTx && (
+        <HostedCheckout
+          isModal={true}
+          checkoutData={{
+            transactionId: checkoutModalTx.id,
+            customerName: checkoutModalTx.customerName,
+            customerEmail: checkoutModalTx.email,
+            customerPhone: checkoutModalTx.phone,
+            productName: checkoutModalTx.productName,
+            originalAmount: checkoutModalTx.amount,
+            discountPercentage: 5,
+            discountAmount: (checkoutModalTx.amount * 5) / 100,
+            finalAmount: Math.round(checkoutModalTx.amount * 0.95),
+            currency: 'INR',
+            cartExpiresAt: new Date(Date.now() + 15 * 60000).toISOString(),
+            recommendedMethod: 'UPI Intent (Google Pay / PhonePe)',
+            status: checkoutModalTx.status === 'Recovered' ? 'completed' : 'active',
+            merchantName: 'Acme India Corp'
+          }}
+          onPaySuccess={handleCheckoutSuccess}
+          onClose={() => setCheckoutModalTx(null)}
+        />
+      )}
 
-                    <h4 style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase' }}>{tx.customerName}</h4>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '11px', color: 'var(--text-muted)' }}>{tx.productName}</p>
+      {/* Auto-Reconciliation Modal */}
+      {reconModalTx && (
+        <ReconciliationModal
+          transaction={reconModalTx}
+          onClose={() => setReconModalTx(null)}
+          onReconciled={handleReconcileSuccess}
+        />
+      )}
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '8px', marginBottom: '12px' }}>
-                      <div>
-                        <span style={{ display: 'block', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount Due</span>
-                        <strong style={{ fontSize: '12px', fontFamily: 'var(--font-mono)' }}>₹{formatCurrency(tx.amount)}</strong>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{ display: 'block', fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Promised Date</span>
-                        <strong style={{ fontSize: '12px', color: 'var(--color-primary)' }}>{tx.ptpDate} ({daysRemaining}d)</strong>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button 
-                        className="btn btn-primary btn-xs" 
-                        style={{ flex: 1, fontSize: '9px' }}
-                        onClick={() => onSwitchToPlayground(tx)}
-                      >
-                        Open Sandbox
-                      </button>
-                      <button 
-                        className="btn btn-outline btn-xs" 
-                        style={{ flex: 1, fontSize: '9px' }}
-                        onClick={() => onNudge(tx.id)}
-                      >
-                        Nudge Early
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Add Failed Payment Modal */}
+      {/* Inject Failed Payment Modal */}
       {isAddModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.65)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 9999,
-          padding: '16px'
-        }}>
-          <div style={{
-            background: 'var(--bg-primary, #FFFFFF)',
-            border: '3px solid var(--border-color, #012652)',
-            boxShadow: '8px 8px 0px var(--border-color, #012652)',
-            maxWidth: '540px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '24px'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '2px solid var(--border-color)', paddingBottom: '12px' }}>
-              <div>
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 800, color: 'var(--color-primary)' }}>
-                  REVENUE RECOVERY PIPELINE
-                </span>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800 }}>➕ Ingest Failed / Due Payment</h2>
-              </div>
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', fontWeight: 800 }}
-              >
-                ✕
+        <div className="modal-backdrop">
+          <div className="modal-card glass-panel" style={{ maxWidth: '500px', width: '90%', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px' }}>Simulate Failed Payment Ingestion</h3>
+              <button className="close-checkout-btn" onClick={() => setIsAddModalOpen(false)}>
+                <i className="fa-solid fa-xmark" />
               </button>
             </div>
 
-            {/* Presets */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                Quick Error Scenario Presets:
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleApplyPreset('otp')}>
-                  📱 OTP Timeout (Card)
-                </button>
-                <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleApplyPreset('balance')}>
-                  💳 Insufficient Balance
-                </button>
-                <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleApplyPreset('upi_limit')}>
-                  ⚡ UPI Limit Exceeded
-                </button>
-                <button type="button" className="btn btn-secondary btn-xs" onClick={() => handleApplyPreset('gateway_503')}>
-                  🏦 Bank 503 Downtime
-                </button>
-              </div>
-            </div>
-
             <form onSubmit={handleCreateTransaction}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div className="form-group">
-                  <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Customer Name *</label>
-                  <input 
-                    type="text" 
-                    required 
-                    className="form-control" 
-                    value={newCustName} 
-                    onChange={e => setNewCustName(e.target.value)} 
-                    placeholder="e.g. Aarav Mehta"
-                  />
-                </div>
-                <div className="form-group">
-                  <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Phone Number *</label>
-                  <input 
-                    type="text" 
-                    required 
-                    className="form-control" 
-                    value={newCustPhone} 
-                    onChange={e => setNewCustPhone(e.target.value)} 
-                    placeholder="+91 98765 12345"
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div className="form-group">
-                  <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Email Address</label>
-                  <input 
-                    type="email" 
-                    className="form-control" 
-                    value={newCustEmail} 
-                    onChange={e => setNewCustEmail(e.target.value)} 
-                    placeholder="customer@example.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Amount Due (₹) *</label>
-                  <input 
-                    type="number" 
-                    step="0.01" 
-                    required 
-                    className="form-control" 
-                    value={newAmount} 
-                    onChange={e => setNewAmount(e.target.value)} 
-                    placeholder="4499.00"
-                  />
-                </div>
+              <div className="form-group" style={{ marginBottom: '12px' }}>
+                <label className="form-lbl">Customer Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={newCustName}
+                  onChange={e => setNewCustName(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="form-group" style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Product / Order Description</label>
-                <input 
-                  type="text" 
-                  className="form-control" 
-                  value={newProduct} 
-                  onChange={e => setNewProduct(e.target.value)} 
-                  placeholder="e.g. Premium Annual SaaS Plan"
+                <label className="form-lbl">Amount (₹)</label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={newAmount}
+                  onChange={e => setNewAmount(e.target.value)}
+                  required
                 />
               </div>
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '11px', textTransform: 'uppercase' }}>Failure Root Cause / Bank Error *</label>
-                <textarea 
-                  rows={2} 
-                  className="form-control" 
-                  value={newNotes} 
-                  onChange={e => setNewNotes(e.target.value)} 
-                  placeholder="e.g. 3D Secure verification timed out during bank checkout"
-                />
+                <label className="form-lbl">Failure Reason</label>
+                <select
+                  className="form-select"
+                  value={newFailureType}
+                  onChange={e => setNewFailureType(e.target.value as any)}
+                >
+                  <option value="authentication_failed">3D Secure OTP verification timed out</option>
+                  <option value="card_declined_insufficient_funds">Card declined: Insufficient funds</option>
+                  <option value="network_timeout">Bank gateway network timeout (503)</option>
+                  <option value="mandate_registration_failed">UPI daily transaction limit reached</option>
+                </select>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                <button type="button" className="btn btn-outline" onClick={() => setIsAddModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" id="btn-submit-new-failed-tx">
-                  🚀 Ingest into Live Recovery Pipeline
-                </button>
-              </div>
+              <button type="submit" className="btn btn-primary full-width" style={{ padding: '10px' }}>
+                <i className="fa-solid fa-bolt" style={{ marginRight: '6px' }} />
+                Ingest Failed Payment & Trigger Drip Cadence
+              </button>
             </form>
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 };

@@ -8,21 +8,25 @@ export interface Transaction {
   timestamp: string;
   failureType: 'card_declined_insufficient_funds' | 'network_timeout' | 'checkout_abandoned' | 'authentication_failed' | 'mandate_registration_failed' | 'invoice_overdue_net15' | 'invoice_overdue_net30' | 'invoice_overdue_net45';
   initialErrorCode: string;
-  status: 'Failed' | 'Recovering' | 'Recovered' | 'Escalated';
+  status: 'Failed' | 'Recovering' | 'Recovered' | 'Escalated' | 'Reconciled';
   attempts: number;
   maxAttempts: number;
-  recoveryChannel: 'WhatsApp' | 'Email' | 'SMS';
+  recoveryChannel: 'WhatsApp' | 'Email' | 'SMS' | 'In-App';
   notes: string;
   ptpDate?: string;
   merchantId?: string;
   recoveryLink?: string;
   discountApplied?: number;
+  cartExpiresAt?: string;
+  reconciledUtr?: string;
+  cadenceStage?: number;
+  resolvedMethod?: string;
 }
 
 export interface AgentLog {
   id: string;
   timestamp: string;
-  source: 'SYSTEM' | 'AGENT' | 'WEBHOOK' | 'PLAYGROUND' | 'COMPLIANCE' | 'CONFIG' | 'SIMULATOR' | 'OPTIMIZER' | 'SECURITY';
+  source: 'SYSTEM' | 'AGENT' | 'WEBHOOK' | 'PLAYGROUND' | 'COMPLIANCE' | 'CONFIG' | 'SIMULATOR' | 'OPTIMIZER' | 'SECURITY' | 'CADENCE' | 'RECONCILIATION';
   message: string;
   type: 'info' | 'debug' | 'success' | 'warning' | 'error';
 }
@@ -56,4 +60,60 @@ export interface ComplianceStatus {
   maxDiscountCap: string;
   pciDssBoundaries: string;
   geminiAiGuardrails: string;
+}
+
+export interface DripStep {
+  id: string;
+  transactionId: string;
+  stepNumber: number;
+  offsetMinutes: number;
+  channel: 'In-App' | 'WhatsApp' | 'SMS' | 'Email';
+  title: string;
+  messagePreview: string;
+  status: 'pending' | 'sent' | 'delivered' | 'cancelled_paid' | 'skipped';
+  scheduledTime: string;
+  executedAt?: string;
+  discountOffered?: number;
+}
+
+export interface BankHealthItem {
+  code: string;
+  name: string;
+  type: 'UPI' | 'Cards' | 'Netbanking' | 'Wallet';
+  successRate: number; // percentage (e.g. 98.4)
+  avgLatencyMs: number;
+  status: 'Healthy' | 'Degraded' | 'Down';
+  trend: 'improving' | 'stable' | 'degrading';
+  recommendation?: string;
+}
+
+export interface ReconciliationRecord {
+  id: string;
+  transactionId: string;
+  customerName: string;
+  amount: number;
+  bankName: string;
+  utrNumber: string;
+  arnNumber: string;
+  status: 'Auto-Reconciled' | 'Under-Investigation' | 'Refunded';
+  detectedAt: string;
+  resolvedAt: string;
+  whatsappNoticeSent: boolean;
+}
+
+export interface HostedCheckoutData {
+  transactionId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  productName: string;
+  originalAmount: number;
+  discountPercentage: number;
+  discountAmount: number;
+  finalAmount: number;
+  currency: string;
+  cartExpiresAt: string;
+  recommendedMethod: string;
+  status: 'active' | 'expired' | 'completed';
+  merchantName: string;
 }
