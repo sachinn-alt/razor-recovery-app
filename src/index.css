@@ -629,94 +629,132 @@ h1, h2, h3, h4, h5, h6 {
   align-items: start;
 }
 
-/* Metric Cards Grid */
+/* Metric Cards Grid - Compact 1-Row Layout */
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-bottom: 32px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .metric-card {
   background-color: var(--bg-panel);
-  border: 4px solid var(--border-color);
-  padding: 24px;
+  border: 2px solid var(--border-color);
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 160px;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  min-height: 98px;
+  box-shadow: 2px 2px 0px var(--border-color);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
 
 .metric-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: var(--color-primary);
+  box-shadow: 3px 3px 0px var(--border-color);
 }
 
 .metric-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .metric-title {
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
 .metric-icon-box {
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--border-color);
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 10.5px;
+  background-color: var(--bg-secondary);
 }
 
-.metric-icon-box.risk {
-  color: var(--color-primary);
-  background-color: var(--bg-secondary);
+.metric-icon-box.failed {
+  color: #DC2626;
+  background-color: #FEF2F2;
 }
 
 .metric-icon-box.recovered {
-  color: #000000;
-  background-color: var(--bg-secondary);
+  color: #16A34A;
+  background-color: #F0FDF4;
+}
+
+.metric-icon-box.rate {
+  color: var(--color-primary);
+  background-color: #EFF6FF;
+}
+
+.metric-icon-box.active-retries {
+  color: #D97706;
+  background-color: #FFFBEB;
 }
 
 .metric-value {
   font-family: var(--font-heading);
   font-weight: 900;
-  font-size: 28px;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  margin: 12px 0;
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 6px 0 8px 0;
 }
 
 .text-recovered {
-  color: #000000;
+  color: #16A34A;
 }
 
 .metric-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  align-items: center;
+  font-size: 9.5px;
   font-family: var(--font-mono);
   text-transform: uppercase;
+  gap: 4px;
+  border-top: 1px dashed rgba(1, 38, 82, 0.12);
+  padding-top: 6px;
 }
 
 .metric-desc {
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-trend {
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 9px;
 }
 
 .metric-count {
   font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Card primitives */
