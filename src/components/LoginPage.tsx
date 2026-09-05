@@ -33,6 +33,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [forgotSuccessMsg, setForgotSuccessMsg] = useState<string | null>(null);
   const [isForgotLoading, setIsForgotLoading] = useState<boolean>(false);
 
+  // What was made & problem solved modal
+  const [showMissionModal, setShowMissionModal] = useState<boolean>(false);
+
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // 2FA Timer countdown
@@ -804,12 +807,26 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             )}
           </div>
 
-          {/* Bottom Legal / Compliance */}
+          {/* Bottom Project Info & Mission */}
           <div className="login-04-footer">
-            <span>Protected by RazorRecovery 256-Bit Cryptographic Vault. By continuing you agree to our </span>
-            <a href="#terms" onClick={e => e.preventDefault()}>Terms of Service</a>
-            <span> and </span>
-            <a href="#privacy" onClick={e => e.preventDefault()}>Privacy Policy</a>.
+            <div className="project-mission-strip">
+              <div className="mission-pill-tag">
+                <i className="fa-solid fa-bolt text-primary" />
+                <span>Built for Razorpay Hackathon</span>
+              </div>
+              <button
+                type="button"
+                className="btn-problem-solved-link"
+                onClick={() => setShowMissionModal(true)}
+                id="btn-open-problem-solved-modal"
+              >
+                <i className="fa-solid fa-circle-question" />
+                <span>What was made & What problem it solves</span>
+              </button>
+            </div>
+            <div className="mission-footnote">
+              Autonomous payment failure recovery engine diagnosing OTP friction, bank timeouts & 1-click cart rescues.
+            </div>
           </div>
         </div>
 
@@ -971,6 +988,118 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* What Was Made & Problem Solved Modal */}
+      {showMissionModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content mission-modal-box">
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <div className="mission-modal-badge">
+                  <i className="fa-solid fa-shield-halved text-primary" />
+                </div>
+                <div>
+                  <h3>⚡ RazorRecovery Platform</h3>
+                  <span className="modal-subtitle">What Was Made & What Problem It Solves</span>
+                </div>
+              </div>
+              <button
+                className="btn-icon"
+                onClick={() => setShowMissionModal(false)}
+                id="btn-close-mission-modal"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div className="modal-body mission-modal-body">
+              {/* Problem Section */}
+              <div className="mission-section-card problem-card">
+                <div className="mission-section-header">
+                  <div className="mission-sec-icon red"><i className="fa-solid fa-triangle-exclamation" /></div>
+                  <div>
+                    <h4>The Problem in Indian Digital Commerce</h4>
+                    <p>Why businesses lose ₹crores in checkout friction every day</p>
+                  </div>
+                </div>
+                <ul className="mission-list">
+                  <li>
+                    <strong>28% Checkout Failure Rate:</strong> 3D Secure OTP delivery timeouts, issuer bank server crashes, and UPI limits cause millions of high-intent purchases to fail.
+                  </li>
+                  <li>
+                    <strong>"Money Debited but Failed" Panic:</strong> Customer bank accounts get deducted while the gateway times out, creating intense support friction, chargebacks, and customer distrust.
+                  </li>
+                  <li>
+                    <strong>Zero Autonomous Triage:</strong> Traditional payment gateways fail passively without attempting smart routing or automated multichannel recovery.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Solution Section */}
+              <div className="mission-section-card solution-card">
+                <div className="mission-section-header">
+                  <div className="mission-sec-icon green"><i className="fa-solid fa-circle-check" /></div>
+                  <div>
+                    <h4>What Was Made (The Autonomous Solution)</h4>
+                    <p>Enterprise payment recovery suite integrated with Razorpay</p>
+                  </div>
+                </div>
+                <div className="mission-grid-2col">
+                  <div className="solution-feature-box">
+                    <i className="fa-solid fa-bolt text-primary" />
+                    <div>
+                      <strong>1-Click Hosted Micro-Checkouts</strong>
+                      <span>15-min countdown cart reservation timer with instant 1-tap UPI Intent fallback.</span>
+                    </div>
+                  </div>
+                  <div className="solution-feature-box">
+                    <i className="fa-solid fa-clock-rotate-left text-primary" />
+                    <div>
+                      <strong>4-Stage Multi-Touch Drip Engine</strong>
+                      <span>Time-decayed WhatsApp, SMS, and Email retries that auto-terminate immediately once paid.</span>
+                    </div>
+                  </div>
+                  <div className="solution-feature-box">
+                    <i className="fa-solid fa-satellite-dish text-primary" />
+                    <div>
+                      <strong>Bank Health Outage Radar</strong>
+                      <span>Real-time issuer switch telemetry (SBI, ICICI, HDFC) to bypass degraded bank rails dynamically.</span>
+                    </div>
+                  </div>
+                  <div className="solution-feature-box">
+                    <i className="fa-solid fa-file-shield text-primary" />
+                    <div>
+                      <strong>UTR Auto-Reconciliation</strong>
+                      <span>Matches late bank captures with zero double-charge and sends instant WhatsApp reassurance proof.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compliance & Security */}
+              <div className="mission-section-card compliance-card">
+                <div className="mission-section-header">
+                  <div className="mission-sec-icon blue"><i className="fa-solid fa-lock" /></div>
+                  <div>
+                    <h4>Enterprise Hardened Compliance</h4>
+                    <p>DPDP Act 2023 Zero-Knowledge PII Tokenization & HMAC SHA-256 Webhook Replay Defense</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'flex-end', paddingTop: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowMissionModal(false)}
+              >
+                Close & Continue to Console
+              </button>
             </div>
           </div>
         </div>
