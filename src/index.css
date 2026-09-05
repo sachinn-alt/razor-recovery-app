@@ -5635,7 +5635,11 @@ textarea.form-control {
   font-family: var(--font-mono);
 }
 
-/* Mobile Responsiveness for Login-04 Layout */
+/* ==========================================================================
+   COMPREHENSIVE MOBILE & TABLET RESPONSIVENESS SUITE
+   ========================================================================== */
+
+/* --- Tablet / Medium Devices (<= 1024px) --- */
 @media (max-width: 1024px) {
   .login-04-grid {
     grid-template-columns: 1fr;
@@ -5646,7 +5650,319 @@ textarea.form-control {
   }
 
   .login-04-form-col {
-    padding: 32px 24px;
+    padding: 36px 28px;
+  }
+
+  .dashboard-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .dashboard-split {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .charts-dual-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .playground-layout,
+  .playground-grid,
+  .chat-layout {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
 }
+
+/* --- Mobile Landscape & Standard Phones (<= 768px) --- */
+@media (max-width: 768px) {
+  /* Global App Header */
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .header-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .brand-logo-area {
+    gap: 8px;
+  }
+
+  .brand-logo-area h1 {
+    font-size: 15px;
+  }
+
+  /* Nav Tabs Horizontal Touch Scroll */
+  .nav-tabs,
+  .header-nav-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    gap: 4px;
+    padding-bottom: 2px;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .nav-tabs::-webkit-scrollbar,
+  .header-nav-tabs::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+
+  .nav-tab-btn {
+    white-space: nowrap;
+    padding: 7px 12px;
+    font-size: 11.5px;
+    flex-shrink: 0;
+  }
+
+  /* User Profile Dropdown Position */
+  .user-profile-dropdown {
+    right: 0;
+    left: auto;
+    width: calc(100vw - 28px);
+    max-width: 300px;
+  }
+
+  /* Dashboard Header */
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .dashboard-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .dashboard-header-actions .btn,
+  .dashboard-header-actions .btn-bank-radar-toggle {
+    flex: 1;
+    min-width: 140px;
+    justify-content: center;
+  }
+
+  /* Cards & Body Padding */
+  .card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+  }
+
+  .card-header-left {
+    width: 100%;
+  }
+
+  .chart-legend {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Table Search & Action Controls */
+  .table-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .filter-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    gap: 4px;
+    scrollbar-width: none;
+  }
+
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-tab {
+    white-space: nowrap;
+    padding: 6px 10px;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  /* Tables Horizontal Scrolling */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--border-color);
+  }
+
+  .tx-table {
+    min-width: 650px;
+  }
+
+  /* Bank Health Radar Grid */
+  .bank-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    padding: 10px;
+  }
+
+  .modal-content,
+  .reconciliation-modal,
+  .mission-modal-box {
+    width: 96% !important;
+    max-width: 96vw !important;
+    max-height: 92vh !important;
+    padding: 16px !important;
+  }
+
+  /* Hosted Checkout Responsive */
+  .hosted-checkout-card {
+    padding: 16px;
+    width: 100%;
+  }
+
+  .checkout-methods-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* --- Small Mobile Phones (<= 580px) --- */
+@media (max-width: 580px) {
+  /* 4 KPI Metric Cards Stack on Small Phones */
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .metric-card {
+    padding: 10px 12px;
+    min-height: 84px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+    margin: 4px 0 6px 0;
+  }
+
+  /* Failure Root Cause Matrix Layout */
+  .matrix-content-layout {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    justify-items: center;
+  }
+
+  .matrix-donut-col {
+    width: 100%;
+  }
+
+  .matrix-breakdown-col {
+    width: 100%;
+  }
+
+  /* Login Form Compact Spacing */
+  .login-04-form-col {
+    padding: 24px 16px;
+  }
+
+  .form-main-title {
+    font-size: 22px;
+  }
+
+  .form-sub-title {
+    font-size: 12.5px;
+  }
+
+  .otp-boxes-flex {
+    gap: 4px;
+  }
+
+  .otp-box-input {
+    width: 38px;
+    height: 46px;
+    font-size: 17px;
+    border-radius: 8px;
+  }
+
+  .strip-buttons {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .chip-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .project-mission-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .btn-problem-solved-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Log Terminal Filters */
+  .log-filter-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .log-source-filters {
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .log-source-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Compliance Grid */
+  .compliance-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 
