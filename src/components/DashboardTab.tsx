@@ -5,6 +5,7 @@ import { HostedCheckout } from './HostedCheckout';
 import { CadenceTimeline } from './CadenceTimeline';
 import { BankHealthRadar } from './BankHealthRadar';
 import { ReconciliationModal } from './ReconciliationModal';
+import { FailureRootCauseMatrix } from './FailureRootCauseMatrix';
 
 interface DashboardTabProps {
   batchData: Transaction[];
@@ -674,27 +675,63 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
         </motion.div>
       </motion.div>
 
-      {/* Recovery Performance Chart */}
-      <motion.div
-        className="card recovery-chart-card"
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-      >
-        <div className="card-header">
-          <div>
-            <span className="section-index">01b. RECOVERY TIMELINE CURVE</span>
-            <h2>Cumulative Revenue Recovery Trend</h2>
+      {/* Visual Analytics Evaluator Suite: Dual Grid */}
+      <div className="charts-dual-grid">
+        {/* Left: Recovery Performance Chart */}
+        <motion.div
+          className="card recovery-chart-card"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <div className="card-header">
+            <div>
+              <span className="section-index">01b. RECOVERY TIMELINE CURVE</span>
+              <h2>Cumulative Revenue Trend</h2>
+            </div>
+            <div className="chart-legend">
+              <span className="legend-item"><span className="legend-dot recovered" /> Recovered</span>
+              <span className="legend-item"><span className="legend-dot lost" /> Lost</span>
+            </div>
           </div>
-          <div className="chart-legend">
-            <span className="legend-item"><span className="legend-dot recovered" /> Recovered Revenue</span>
-            <span className="legend-item"><span className="legend-dot lost" /> Permanent Loss / Escalated</span>
+          <div className="card-body">
+            <RecoveryChart history={chartHistory} />
           </div>
-        </div>
-        <div className="card-body">
-          <RecoveryChart history={chartHistory} />
-        </div>
-      </motion.div>
+        </motion.div>
+
+        {/* Right: Root Cause & Resolution Rate Matrix */}
+        <motion.div
+          className="card root-cause-chart-card"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="card-header">
+            <div>
+              <span className="section-index">01c. FAILURE ROOT-CAUSE & RESOLUTION</span>
+              <h2>Friction Distribution & Rescue Yield</h2>
+            </div>
+            <div className="chart-legend">
+              <span className="legend-item"><i className="fa-solid fa-circle-nodes" style={{ color: 'var(--color-primary)', marginRight: '4px' }} /> AI Classifier</span>
+            </div>
+          </div>
+          <div className="card-body" style={{ padding: '16px 20px 14px' }}>
+            <FailureRootCauseMatrix
+              transactions={batchData}
+              onFilterByReason={(id) => {
+                const termMap: Record<string, string> = {
+                  network_timeout: 'network',
+                  authentication_failed: 'auth',
+                  insufficient_funds: 'declined',
+                  invoice_overdue: 'invoice',
+                  mandate_failed: 'mandate',
+                };
+                setSearch(termMap[id] || id);
+              }}
+            />
+          </div>
+        </motion.div>
+      </div>
 
       {/* Main Split: Table + Inspector Drawer */}
       <div className="dashboard-split">
