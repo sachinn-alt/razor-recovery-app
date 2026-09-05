@@ -405,11 +405,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <span>Razor</span><span className="brand-accent">Recovery</span>
               </div>
             </div>
-
-            <div className="terminal-live-chip">
-              <span className="pulse-ping" />
-              <span>TERMINAL READY · MID: rx_921045</span>
-            </div>
           </div>
 
           {/* Form Content Center */}
@@ -812,7 +807,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             <div className="project-mission-strip">
               <div className="mission-pill-tag">
                 <i className="fa-solid fa-bolt text-primary" />
-                <span>Built for Razorpay Hackathon</span>
+                <span>Built for Razorpay Buildathon</span>
               </div>
               <button
                 type="button"
