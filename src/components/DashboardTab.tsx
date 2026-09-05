@@ -230,6 +230,141 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
   const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
+  const [isSimulatingWebhook, setIsSimulatingWebhook] = useState(false);
+  const [webhookSimSuccess, setWebhookSimSuccess] = useState<string | null>(null);
+
+  // DPDP Zero-Knowledge PII State
+  const [unmaskedPii, setUnmaskedPii] = useState<{ [id: string]: { phone: string; email: string } }>({});
+  const [isUnmasking, setIsUnmasking] = useState(false);
+  const [piiError, setPiiError] = useState<string | null>(null);
+
+  const handleRevealPii = async (txId: string) => {
+    if (unmaskedPii[txId]) {
+      setUnmaskedPii(prev => {
+        const next = { ...prev };
+        delete next[txId];
+        return next;
+      });
+      return;
+    }
+
+    setIsUnmasking(true);
+    setPiiError(null);
+    const token = localStorage.getItem('razor_auth_token') || sessionStorage.getItem('razor_auth_token');
+    try {
+      const res = await fetch('/api/audit-logs/reveal-pii', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ transactionId: txId, auditReason: 'Operator Compliance Audit' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.unmaskedPii) {
+        setUnmaskedPii(prev => ({ ...prev, [txId]: data.unmaskedPii }));
+      } else {
+        setPiiError(data.error || 'Access Denied: Admin role required under DPDP Act 2023');
+        setTimeout(() => setPiiError(null), 4000);
+      }
+    } catch (err: any) {
+      setPiiError(err.message || 'Failed to unmask PII');
+      setTimeout(() => setPiiError(null), 4000);
+    } finally {
+      setIsUnmasking(false);
+    }
+  };
+
+  const handleSimulateRazorpayWebhook = async () => {
+    setIsSimulatingWebhook(true);
+    setWebhookSimSuccess(null);
+
+    const testTxId = `pay_rzp_${Date.now().toString(36).toUpperCase()}`;
+    const testPayload = {
+      event_id: `evt_sim_${Date.now()}`,
+      event: 'payment.failed',
+      created_at: Math.floor(Date.now() / 1000),
+      payload: {
+        payment: {
+          entity: {
+            id: testTxId,
+            amount: 549900,
+            currency: 'INR',
+            contact: '+919811223344',
+            email: 'shreya.iyer@fintech.in',
+            method: 'upi',
+            error_code: 'BAD_REQUEST_AUTHENTICATION_FAILED',
+            error_description: '3D Secure UPI PIN verification timed out',
+            notes: { customer_name: 'Shreya Iyer' }
+          }
+        }
+      }
+    };
+
+    const rawBody = JSON.stringify(testPayload);
+
+    try {
+      const enc = new TextEncoder();
+      const key = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode('whsec_live_razor_test_key_991823'),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const signatureBuf = await window.crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+      const signatureHex = Array.from(new Uint8Array(signatureBuf))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      const res = await fetch('/api/webhooks/razorpay', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-merchant-id': 'mid_acme_india',
+          'x-razorpay-signature': signatureHex,
+          'x-razorpay-event-time': Math.floor(Date.now() / 1000).toString()
+        },
+        body: rawBody
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setWebhookSimSuccess(`⚡ Razorpay Webhook Ingested! Tx: ${testTxId} • 1-Click Recovery Cadence Dispatched (${data.latencyMs}ms)`);
+        
+        if (onAddTransaction) {
+          onAddTransaction({
+            id: testTxId,
+            customerName: 'Shreya Iyer',
+            email: 'shreya.iyer@fintech.in',
+            phone: '+9198****344',
+            amount: 5499.00,
+            status: 'Failed',
+            failureType: 'authentication_failed',
+            initialErrorCode: 'BAD_REQUEST_AUTHENTICATION_FAILED',
+            productName: 'Enterprise SaaS Pro License',
+            notes: '3D Secure UPI PIN verification timed out (Auto-Ingested from Razorpay)',
+            paymentMethod: 'UPI',
+            recoveryLink: `/pay/${testTxId}?disc=0`,
+            discountApplied: 0,
+            cartExpiresAt: new Date(Date.now() + 15 * 60000).toISOString(),
+            cadenceStage: 1,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            attempts: 1,
+            maxAttempts: 3,
+            recoveryChannel: 'WhatsApp'
+          });
+        }
+      }
+    } catch (err: any) {
+      setWebhookSimSuccess(`❌ Simulation failed: ${err.message}`);
+    } finally {
+      setIsSimulatingWebhook(false);
+      setTimeout(() => setWebhookSimSuccess(null), 6000);
+    }
+  };
+
   const [newCustName, setNewCustName] = useState('Aarav Mehta');
   const [newAmount, setNewAmount] = useState('4499.00');
   const [newFailureType, setNewFailureType] = useState<Transaction['failureType']>('authentication_failed');
@@ -399,6 +534,26 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
 
         <div className="roi-action-box">
           <button
+            className="btn-bank-radar-toggle"
+            onClick={handleSimulateRazorpayWebhook}
+            disabled={isSimulatingWebhook}
+            title="Simulate live Razorpay webhook ingestion"
+            style={{ background: '#305EFF', color: '#FFFFFF', borderColor: '#012652' }}
+          >
+            {isSimulatingWebhook ? <i className="fa-solid fa-spinner fa-spin" /> : <i className="fa-solid fa-bolt" />}
+            <span>{isSimulatingWebhook ? 'Ingesting...' : 'Test Razorpay Webhook'}</span>
+          </button>
+
+          <button
+            className="btn-bank-radar-toggle"
+            onClick={() => setIsRazorpayModalOpen(true)}
+            title="Open Razorpay Integration Hub & API Webhook Config"
+          >
+            <i className="fa-solid fa-plug" />
+            <span>Razorpay Hub</span>
+          </button>
+
+          <button
             className={`btn-bank-radar-toggle ${showBankHealth ? 'active' : ''}`}
             onClick={() => setShowBankHealth(!showBankHealth)}
             title="Toggle Live Banking Gateway Telemetry"
@@ -408,6 +563,38 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           </button>
         </div>
       </motion.div>
+
+      {/* Live Webhook Toast Notification */}
+      <AnimatePresence>
+        {webhookSimSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            style={{
+              padding: '10px 16px',
+              background: '#E8F3FF',
+              border: '1.5px solid #012652',
+              marginBottom: '16px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#012652',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '2px 2px 0px #012652'
+            }}
+          >
+            <span>{webhookSimSuccess}</span>
+            <button
+              onClick={() => setWebhookSimSuccess(null)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#012652' }}
+            >
+              <i className="fa-solid fa-xmark" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Real-Time Bank Outage & Downstream Health Radar */}
       <AnimatePresence>
@@ -712,8 +899,40 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                       </span>
                     </div>
                     <div className="info-item">
-                      <strong>Contact</strong>
-                      <span>{selectedTx.phone}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong>Customer Contact</strong>
+                        <button
+                          type="button"
+                          onClick={() => handleRevealPii(selectedTx.id)}
+                          disabled={isUnmasking}
+                          title="Unmask under DPDP Act 2023 (Admin Role Required)"
+                          style={{
+                            background: 'none',
+                            border: '1px solid var(--border-color)',
+                            padding: '2px 6px',
+                            fontSize: '9.5px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            color: 'var(--color-primary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            textTransform: 'uppercase'
+                          }}
+                        >
+                          {isUnmasking ? <i className="fa-solid fa-spinner fa-spin" /> : <i className="fa-solid fa-eye" />}
+                          <span>{unmaskedPii[selectedTx.id] ? 'Mask' : 'Unmask (Admin)'}</span>
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '3px' }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 'bold' }}>
+                          {unmaskedPii[selectedTx.id]?.phone || selectedTx.phone}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          {unmaskedPii[selectedTx.id]?.email || selectedTx.email || 'customer@acmeindia.com'}
+                        </span>
+                      </div>
+                      {piiError && <span style={{ fontSize: '9.5px', color: '#990000', marginTop: '2px', display: 'block' }}>{piiError}</span>}
                     </div>
                   </div>
 
@@ -899,6 +1118,98 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
                 Ingest Failed Payment & Trigger Drip Cadence
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Razorpay Fast Integration Hub Modal */}
+      {isRazorpayModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-card glass-panel" style={{ maxWidth: '640px', width: '92%', padding: '28px', border: '2px solid var(--border-color)', boxShadow: '6px 6px 0px var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', paddingBottom: '12px', borderBottom: '1.5px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', background: '#305EFF', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>
+                  <i className="fa-solid fa-plug" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '900', textTransform: 'uppercase' }}>Razorpay Fast-Integration Hub</h3>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Automate revenue recovery from failed Razorpay checkouts</span>
+                </div>
+              </div>
+              <button className="btn-icon" onClick={() => setIsRazorpayModalOpen(false)}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Step 1: Webhook URL */}
+              <div style={{ padding: '14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <strong style={{ fontSize: '11.5px', textTransform: 'uppercase' }}>Step 1: Webhook Endpoint URL</strong>
+                  <span className="badge-admin" style={{ fontSize: '9px', padding: '1px 5px' }}>POST HTTPS</span>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 8px 0' }}>
+                  Paste this URL in Razorpay Dashboard → Settings → Webhooks:
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/api/webhooks/razorpay`}
+                    style={{ flex: 1, padding: '6px 10px', fontSize: '11.5px', fontFamily: 'var(--font-mono)', border: '1.5px solid var(--border-color)', background: '#FFFFFF' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/razorpay`);
+                      alert('Webhook URL copied to clipboard!');
+                    }}
+                    style={{ padding: '6px 12px', fontSize: '11px', fontWeight: '800' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Step 2: Webhook Secret & Events */}
+              <div style={{ padding: '14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <strong style={{ fontSize: '11.5px', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Step 2: Webhook Secret & Events</strong>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 8px 0' }}>
+                  Enter your Webhook Secret and check these events in your Razorpay Dashboard:
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '10px', padding: '3px 8px', background: '#E8F3FF', border: '1px solid var(--border-color)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>payment.failed</span>
+                  <span style={{ fontSize: '10px', padding: '3px 8px', background: '#E8F3FF', border: '1px solid var(--border-color)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>order.paid</span>
+                  <span style={{ fontSize: '10px', padding: '3px 8px', background: '#E8F3FF', border: '1px solid var(--border-color)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>payment.captured</span>
+                  <span style={{ fontSize: '10px', padding: '3px 8px', background: '#E8F3FF', border: '1px solid var(--border-color)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>refund.processed</span>
+                </div>
+              </div>
+
+              {/* Step 3: Test Webhook Handshake Trigger */}
+              <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setIsRazorpayModalOpen(false);
+                    handleSimulateRazorpayWebhook();
+                  }}
+                  style={{ flex: 1, padding: '10px', fontWeight: '800', textTransform: 'uppercase' }}
+                >
+                  <i className="fa-solid fa-bolt" style={{ marginRight: '6px' }} />
+                  Dispatch Test Webhook & Verify Handshake
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsRazorpayModalOpen(false)}
+                  style={{ padding: '10px 16px' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

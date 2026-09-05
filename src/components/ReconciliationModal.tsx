@@ -22,7 +22,7 @@ export const ReconciliationModal: React.FC<ReconciliationModalProps> = ({
   const handleExecuteReconcile = async () => {
     setIsProcessing(true);
     try {
-      const res = await fetch('http://localhost:3001/api/reconcile', {
+      const res = await fetch('/api/reconcile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

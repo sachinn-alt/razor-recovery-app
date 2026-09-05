@@ -21,6 +21,7 @@ export interface Transaction {
   reconciledUtr?: string;
   cadenceStage?: number;
   resolvedMethod?: string;
+  paymentMethod?: string;
 }
 
 export interface AgentLog {

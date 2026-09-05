@@ -48,7 +48,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
 
   useEffect(() => {
     // Fetch live compliance status from backend
-    fetch('http://localhost:3001/api/compliance/status')
+    fetch('/api/compliance/status')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.compliance) {
@@ -74,9 +74,10 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     addLog('SECURITY', 'Dispatched test Webhook HMAC SHA-256 handshake to backend...', 'info');
 
     try {
-      const payload = {
-        id: `evt_handshake_${Date.now()}`,
+      const payloadObj = {
+        event_id: `evt_handshake_${Date.now()}`,
         event: 'payment.failed',
+        created_at: Math.floor(Date.now() / 1000),
         payload: {
           payment: {
             entity: {
@@ -84,29 +85,48 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               amount: 449900,
               currency: 'INR',
               email: 'test@merchant.com',
-              contact: '+919876543210',
+              contact: '+919811223344',
               error_code: 'BAD_REQUEST_AUTHENTICATION_FAILED',
-              error_description: 'Test payment failure handshake'
+              error_description: 'Test payment failure handshake for Razorpay integration',
+              notes: { customer_name: 'Test Customer' }
             }
           }
         }
       };
 
-      const res = await fetch('http://localhost:3001/api/webhooks/razorpay', {
+      const rawBody = JSON.stringify(payloadObj);
+      
+      // Calculate HMAC-SHA256 signature in browser using Web Crypto API
+      const enc = new TextEncoder();
+      const key = await window.crypto.subtle.importKey(
+        'raw',
+        enc.encode('whsec_live_razor_test_key_991823'),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      const signatureBuf = await window.crypto.subtle.sign('HMAC', key, enc.encode(rawBody));
+      const signatureHex = Array.from(new Uint8Array(signatureBuf))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      const res = await fetch('/api/webhooks/razorpay', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-merchant-id': 'mid_acme_india'
+          'x-merchant-id': 'mid_acme_india',
+          'x-razorpay-signature': signatureHex,
+          'x-razorpay-event-time': Math.floor(Date.now() / 1000).toString()
         },
-        body: JSON.stringify(payload)
+        body: rawBody
       });
 
       const data = await res.json();
       setTestingWebhook(false);
 
       if (data.success) {
-        setWebhookTestResult(`✅ Handshake Verified (${data.latencyMs}ms) • Event: ${data.event} • Idempotent Protection Active`);
-        addLog('SECURITY', `Webhook handshake verified successfully in ${data.latencyMs}ms! Idempotency key registered.`, 'success');
+        setWebhookTestResult(`✅ Handshake Verified (${data.latencyMs}ms) • Event: ${data.eventType} • Target: ${data.targetTxId}`);
+        addLog('SECURITY', `Webhook handshake verified in ${data.latencyMs}ms! Signature valid, 300s replay guard active.`, 'success');
       } else {
         setWebhookTestResult(`❌ Error: ${data.error}`);
         addLog('SECURITY', `Webhook verification check failed: ${data.error}`, 'error');

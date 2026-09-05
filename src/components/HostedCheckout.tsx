@@ -42,10 +42,10 @@ export const HostedCheckout: React.FC<HostedCheckoutProps> = ({
   const handle1TapPayment = async () => {
     setIsProcessing(true);
     try {
-      await fetch(`http://localhost:3001/api/checkout/${checkoutData.transactionId}/pay`, {
+      await fetch(`/api/checkout/${checkoutData.transactionId}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod: selectedMethod })
+        body: JSON.stringify({ method: selectedMethod })
       });
 
       setTimeout(() => {

@@ -58,7 +58,7 @@ export const PlaygroundTab: React.FC<PlaygroundTabProps> = ({
 
   // Fetch Razorpay Optimizer intelligent fallback strategy
   useEffect(() => {
-    fetch('http://localhost:3001/api/optimizer/recommend', {
+    fetch('/api/optimizer/recommend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -304,7 +304,7 @@ export const PlaygroundTab: React.FC<PlaygroundTabProps> = ({
 
     try {
       // Call live backend API with Gemini AI
-      const response = await fetch('http://localhost:3001/api/recovery/chat', {
+      const response = await fetch('/api/recovery/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -407,7 +407,7 @@ export const PlaygroundTab: React.FC<PlaygroundTabProps> = ({
 
       // Otherwise send to AI
       setIsTyping(true);
-      fetch('http://localhost:3001/api/recovery/chat', {
+      fetch('/api/recovery/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
