@@ -1,5 +1,10 @@
 {
+  "name": "razor-recovery-app",
   "framework": "vite",
+  "alias": [
+    "razor-recovery-app.vercel.app",
+    "razorrecovery.vercel.app"
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
