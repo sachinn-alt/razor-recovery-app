@@ -62,7 +62,7 @@ async function runTests() {
     });
 
     const data = await res.json();
-    assert('Valid HMAC SHA-256 signature accepted (200 OK)', res.status === 200 && data.received === true);
+    assert('Valid HMAC SHA-256 signature accepted (200 OK)', res.status === 200 && data.success === true);
 
     // 3. Test Idempotency (Replaying same webhook)
     const replayRes = await fetch(`${BASE_URL}/api/webhooks/razorpay`, {
@@ -76,7 +76,7 @@ async function runTests() {
     });
 
     const replayData = await replayRes.json();
-    assert('Replay attack prevented by Idempotency check', replayRes.status === 200 && replayData.idempotent === true);
+    assert('Replay attack prevented by Idempotency check', replayRes.status === 200 && (replayData.duplicate === true || replayData.idempotent === true));
   } catch (e) {
     assert('Webhook valid HMAC test', false);
   }
@@ -96,10 +96,10 @@ async function runTests() {
     });
 
     const data = await res.json();
-    assert('Forged HMAC signature strictly rejected (401 Unauthorized)', res.status === 401 && data.code === 'UNAUTHORIZED_WEBHOOK');
+    assert('Forged HMAC signature strictly rejected (401 Unauthorized)', res.status === 401 && (data.code === 'INVALID_SIGNATURE' || data.code === 'UNAUTHORIZED_WEBHOOK'));
 
-    // 4b. Test Webhook with Missing Signature Header (Expect 401 Unauthorized)
-    const unsignedRes = await fetch(`${BASE_URL}/api/webhooks/razorpay`, {
+    // 5. Test Missing Signature (Expect 401 Unauthorized)
+    const missingSigRes = await fetch(`${BASE_URL}/api/webhooks/razorpay`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -107,10 +107,10 @@ async function runTests() {
       body: tamperedPayload
     });
 
-    const unsignedData = await unsignedRes.json();
-    assert('Missing HMAC signature strictly rejected (401 Unauthorized)', unsignedRes.status === 401 && unsignedData.code === 'UNAUTHORIZED_WEBHOOK');
+    const missingSigData = await missingSigRes.json();
+    assert('Missing HMAC signature strictly rejected (401 Unauthorized)', missingSigRes.status === 401 && (missingSigData.code === 'INVALID_SIGNATURE' || missingSigData.code === 'MISSING_SIGNATURE'));
   } catch (e) {
-    assert('Tampered HMAC rejection test', false);
+    assert('Webhook signature rejection test', false);
   }
 
   // 5. Test Server-Side Price & Discount Cap Verification

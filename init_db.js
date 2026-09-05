@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const dbPath = path.resolve('recovery.db');
 const db = new DatabaseSync(dbPath);
@@ -13,6 +14,11 @@ db.exec(`
   PRAGMA cache_size = -64000;
   PRAGMA foreign_keys = OFF;
 `);
+
+// Helper to hash password with PBKDF2-SHA512
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 100000, 64, 'sha512').toString('hex');
+}
 
 // Migration helper
 function addColumnIfNotExists(table, column, typeDef) {
@@ -187,13 +193,95 @@ db.exec(`
   );
 `);
 
+// 10. Users Table for Secure Enterprise Auth
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    merchant_id TEXT NOT NULL DEFAULT 'mid_acme_india',
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    salt TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'Admin',
+    failed_attempts INTEGER DEFAULT 0,
+    locked_until DATETIME,
+    mfa_secret TEXT,
+    mfa_enabled INTEGER DEFAULT 1,
+    last_login DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+addColumnIfNotExists('users', 'mfa_enabled', 'INTEGER DEFAULT 1');
+addColumnIfNotExists('users', 'failed_attempts', 'INTEGER DEFAULT 0');
+addColumnIfNotExists('users', 'locked_until', 'DATETIME');
+
 // Create Indexes
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tx_merchant_status ON transactions(merchant_id, status);
   CREATE INDEX IF NOT EXISTS idx_tx_created_at ON transactions(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_cadence_tx ON drip_cadences(transaction_id, step_number);
   CREATE INDEX IF NOT EXISTS idx_processed_events_time ON processed_events(processed_at);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_users_merchant ON users(merchant_id);
 `);
+
+// Seed Default Users
+const insertUser = db.prepare(`
+  INSERT OR REPLACE INTO users (
+    id, merchant_id, email, name, password_hash, salt, role, failed_attempts, mfa_secret, mfa_enabled, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+`);
+
+const defaultUsers = [
+  {
+    id: 'usr_admin_001',
+    merchant_id: 'mid_acme_india',
+    email: 'admin@razorpay-recovery.ai',
+    name: 'Aarav Mehta',
+    password: 'SecureAdmin@2026!',
+    role: 'Admin',
+    mfa_secret: 'JBSWY3DPEHPK3PXP',
+    mfa_enabled: 1
+  },
+  {
+    id: 'usr_finance_002',
+    merchant_id: 'mid_acme_india',
+    email: 'finance@acmeindia.com',
+    name: 'Priya Nambiar',
+    password: 'FinanceLead@2026!',
+    role: 'Finance Lead',
+    mfa_secret: 'JBSWY3DPEHPK3PXQ',
+    mfa_enabled: 1
+  },
+  {
+    id: 'usr_ops_003',
+    merchant_id: 'mid_acme_india',
+    email: 'operator@acmeindia.com',
+    name: 'Rohan Deshmukh',
+    password: 'OperatorPass@2026!',
+    role: 'Support Operator',
+    mfa_secret: 'JBSWY3DPEHPK3PXR',
+    mfa_enabled: 0
+  }
+];
+
+for (const u of defaultUsers) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = hashPassword(u.password, salt);
+  insertUser.run(
+    u.id,
+    u.merchant_id,
+    u.email,
+    u.name,
+    hash,
+    salt,
+    u.role,
+    0,
+    u.mfa_secret,
+    u.mfa_enabled
+  );
+}
+console.log('✅ Seeded Multi-Role Secure Enterprise Users (Admin, Finance Lead, Support Operator).');
 
 // Seed Default Merchant
 const insertMerchant = db.prepare(`

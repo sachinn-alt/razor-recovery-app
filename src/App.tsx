@@ -6,8 +6,10 @@ import { SimulatorTab } from './components/SimulatorTab';
 import { PlaygroundTab } from './components/PlaygroundTab';
 import { SettingsTab } from './components/SettingsTab';
 import { HostedCheckout } from './components/HostedCheckout';
+import { LoginPage } from './components/LoginPage';
+import { UserProfileMenu } from './components/UserProfileMenu';
 
-import type { Transaction, AgentLog, ChatState } from './types';
+import type { Transaction, AgentLog, ChatState, AuthUser, SessionInfo } from './types';
 import { useBatchSimulator } from './hooks/useBatchSimulator';
 
 export const App: React.FC = () => {
@@ -15,6 +17,54 @@ export const App: React.FC = () => {
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [isSidebarHovered, setIsSidebarHovered] = useState<boolean>(false);
   const [directPayTxId, setDirectPayTxId] = useState<string | null>(null);
+
+  // Authentication State
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isCheckingSession, setIsCheckingSession] = useState<boolean>(true);
+
+  // Validate session on mount
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      const token = localStorage.getItem('razor_auth_token') || sessionStorage.getItem('razor_auth_token');
+      if (!token) {
+        setIsCheckingSession(false);
+        setIsAuthenticated(false);
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.user) {
+          setCurrentUser(data.user);
+          setIsAuthenticated(true);
+        } else {
+          // Token invalid / expired
+          localStorage.removeItem('razor_auth_token');
+          sessionStorage.removeItem('razor_auth_token');
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        // Fallback to local stored user if offline
+        const storedUser = localStorage.getItem('razor_auth_user') || sessionStorage.getItem('razor_auth_user');
+        if (storedUser) {
+          try {
+            setCurrentUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+          } catch {
+            setIsAuthenticated(false);
+          }
+        }
+      } finally {
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkActiveSession();
+  }, []);
 
   // Check URL hash or search params for standalone /pay/:id route
   useEffect(() => {
@@ -220,7 +270,79 @@ export const App: React.FC = () => {
     addLog('SYSTEM', `Injected new failed transaction: ${newTx.customerName} (₹${newTx.amount.toFixed(2)}) [${newTx.id}] into recovery pipeline.`, 'info');
   };
 
+  const handleLoginSuccess = (session: SessionInfo) => {
+    setCurrentUser(session.user);
+    setIsAuthenticated(true);
+    addLog('SECURITY', `Authenticated session established for ${session.user.name} (${session.user.role}). Vault active.`, 'success');
+  };
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem('razor_auth_token') || sessionStorage.getItem('razor_auth_token');
+    try {
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+    } catch {
+      // ignore network logout errors
+    } finally {
+      localStorage.removeItem('razor_auth_token');
+      localStorage.removeItem('razor_auth_user');
+      sessionStorage.removeItem('razor_auth_token');
+      sessionStorage.removeItem('razor_auth_user');
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      addLog('SECURITY', 'User session terminated. Terminal locked.', 'warning');
+    }
+  };
+
+  const handleLockSession = () => {
+    setIsAuthenticated(false);
+    addLog('SECURITY', 'Workstation session locked by operator.', 'info');
+  };
+
+  const handleSwitchPersona = async (persona: 'admin' | 'finance' | 'operator') => {
+    try {
+      const res = await fetch('/api/auth/quick-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ persona })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCurrentUser(data.user);
+        localStorage.setItem('razor_auth_token', data.token);
+        localStorage.setItem('razor_auth_user', JSON.stringify(data.user));
+        addLog('SECURITY', `Role switched to ${data.user.role} (${data.user.name}) with renewed HMAC token.`, 'info');
+      }
+    } catch (err: any) {
+      addLog('SECURITY', `Failed to switch role: ${err.message}`, 'error');
+    }
+  };
+
   const processedCount = batchData.filter(t => t.status === 'Recovered' || t.status === 'Escalated').length;
+
+  // Session verification loading splash
+  if (isCheckingSession) {
+    return (
+      <div className="auth-loading-splash">
+        <div className="splash-card">
+          <div className="splash-logo">
+            <i className="fa-solid fa-shield-halved fa-spin" />
+          </div>
+          <h3>Verifying Security Token...</h3>
+          <p>Initialising Zero-Trust Cryptographic Channel</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Gate the console behind the Login Page
+  if (!isAuthenticated || !currentUser) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
 
   // Render standalone customer recovery checkout if accessed via direct link
   if (directPayTxId) {
@@ -292,15 +414,12 @@ export const App: React.FC = () => {
               </button>
             </div>
 
-            <div className="merchant-profile">
-              <div className="merchant-avatar">
-                <i className="fa-solid fa-store" />
-              </div>
-              <div className="merchant-info">
-                <span className="merchant-name">Acme India Corp</span>
-                <span className="merchant-id">MID: rx_921045</span>
-              </div>
-            </div>
+            <UserProfileMenu
+              user={currentUser}
+              onLogout={handleLogout}
+              onLockSession={handleLockSession}
+              onSwitchPersona={handleSwitchPersona}
+            />
           </div>
         </header>
 

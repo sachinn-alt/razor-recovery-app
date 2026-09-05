@@ -117,3 +117,22 @@ export interface HostedCheckoutData {
   status: 'active' | 'expired' | 'completed';
   merchantName: string;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'Admin' | 'Finance Lead' | 'Support Operator' | string;
+  merchantId: string;
+  mfaEnabled?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
+}
+
+export interface SessionInfo {
+  token: string;
+  user: AuthUser;
+  expiresAt: string;
+  encryption: string;
+  issuer: string;
+}
